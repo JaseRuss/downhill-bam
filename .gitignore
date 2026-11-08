@@ -1,0 +1,16 @@
+node_modules
+dist
+
+# Logs and env
+*.log
+.env
+.env.*
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+
+# Local-only Claude settings
+.claude/settings.local.json
