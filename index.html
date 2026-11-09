@@ -24,6 +24,10 @@
     #speed { top: 14px; right: 22px; font-size: 40px; text-align: right; }
     #speed small { display: block; font-size: 15px; opacity: .85; letter-spacing: 2px; }
     #hops { top: 74px; right: 22px; font-size: 18px; text-align: right; }
+    #wanted { top: 100px; right: 22px; font-size: 28px; text-align: right; color: #ffd23f; letter-spacing: 2px; display: none; }
+    #wanted small { display: block; font-size: 13px; color: #fff; letter-spacing: 3px; }
+    #wanted .off { color: rgba(255,255,255,.25); }
+    #wanted.bump { animation: pop .4s cubic-bezier(.3,1.8,.6,1); }
     #progress { top: 18px; left: 50%; transform: translateX(-50%); width: min(46vw, 560px); height: 10px; background: rgba(0,0,0,.35); border-radius: 6px; border: 2px solid rgba(255,255,255,.6); }
     #progress .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--gold); border-radius: 4px; }
     #progress .mark { position: absolute; top: -6px; width: 4px; height: 18px; background: #fff; border-radius: 2px; }
@@ -112,6 +116,7 @@
     body.mobile #combo { top: 50px; font-size: 22px; }
     body.mobile #speed { font-size: 28px; top: 8px; right: calc(14px + env(safe-area-inset-right)); }
     body.mobile #hops { top: 50px; font-size: 13px; right: calc(14px + env(safe-area-inset-right)); }
+    body.mobile #wanted { top: 68px; font-size: 18px; right: calc(14px + env(safe-area-inset-right)); }
     body.mobile #progress { top: 12px; width: 38vw; }
     body.mobile #commentary { font-size: 14px; bottom: 10px; max-width: 54vw; padding: 6px 12px 8px; }
     body.mobile #bam { font-size: 110px; }
@@ -167,6 +172,7 @@
   <div id="combo" class="hud"></div>
   <div id="speed" class="hud" style="display:none"><small>MPH</small><span>0</span></div>
   <div id="hops" class="hud" style="display:none"></div>
+  <div id="wanted" class="hud"></div>
   <div id="progress" class="hud" style="display:none"><div class="fill"></div></div>
   <div id="popups" class="hud"></div>
   <div id="commentary" class="hud"><b>DOUGIE:</b><span></span></div>

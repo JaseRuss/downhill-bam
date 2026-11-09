@@ -4,6 +4,7 @@ import * as SP from './SetPieces';
 import { scaffold } from '../props/Props';
 import { toWorld } from '../world/Road';
 import { skooshCan } from '../props/Pickups';
+import { marchers, policeCar, policeBox, arcadeCabinet } from '../props/Homages';
 
 export interface TourInfo {
   name: string;
@@ -71,6 +72,16 @@ export function buildRoyalMile(): Level {
   SP.holyrood();
   // a can of SKOOSH for the long run down from the Tron to the World's End
   skooshCan(318, 0);
+  // nods to the local games industry: wee marchers, the polis, an arcade cabinet
+  marchers(252, 8);
+  marchers(445, 7);
+  policeCar(120, -4.2);
+  policeBox(172, -6.6);
+  policeBox(395, 6.5);
+  policeCar(540, 4.2);
+  policeCar(574, -4.4, 0.4);
+  arcadeCabinet(266, -6.7);
+  arcadeCabinet(452, 6.6);
 
   // extra scaffolding on a couple of ordinary lands
   scaffold(116, 124, -6.7, 6);

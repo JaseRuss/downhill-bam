@@ -17,6 +17,7 @@ import type { Part } from '../destruction/Destruction';
 import { TOUR as RM_TOUR, TourInfo, Level, tourStops } from './RoyalMile';
 import { princesGardens, inGardens, GARDEN_START } from './Gardens';
 import { skooshCan } from '../props/Pickups';
+import { marchers, policeCar, policeBox, arcadeCabinet } from '../props/Homages';
 import { shopWindow } from '../art/Interiors';
 
 /**
@@ -1239,8 +1240,17 @@ export function buildDiversion(tier: number): Level {
   grassmarket();
   // SKOOSH at the start of the two long runs: across the Grassmarket, and down Leith Walk
   skooshCan(m.grassmarket + 4, 0);
+  // nods to the local games industry: wee marchers, the polis (with a wanted level), arcade cabinets
+  policeCar(JOIN_S - 8, -4.3); // directing the diversion, naturally
+  policeBox(m.victoria + 44, edgeR(m.victoria + 44) - 1.0);
+  marchers(m.grassmarket + 84, 8);
+  policeCar(m.grassmarket + 92, -(edgeL(m.grassmarket + 92) - 1.4));
+  arcadeCabinet(m.victoria + 14, edgeR(m.victoria + 14) - 0.8);
   if (tier >= 3) {
     kingsStables();
+    policeCar(m.ksr + 64, 3.4); // booking the parked cars
+    policeBox(m.princes + 62, -(edgeL(m.princes + 62) - 1.2));
+    marchers(m.princes + 196, 8);
     caledonian();
     princesGardens(LIMIT);
     scottMonument(m.princes + 210, 30);
@@ -1253,6 +1263,11 @@ export function buildDiversion(tier: number): Level {
     walnutWhip();
     leithWalkWorks();
     derby();
+    // the polis are at the derby too
+    policeCar(m.leithwalk + 22 + 3 * 44 - 18, edgeR(m.leithwalk + 150) - 1.6);
+    policeBox(m.leithwalk + 22 + 3 * 44 + 26, -(edgeL(m.leithwalk + 180) - 1.2));
+    arcadeCabinet(m.leithwalk + 66, -(edgeL(m.leithwalk + 66) - 0.8));
+    marchers(m.junctionst + 30, 7);
     skooshCan(m.leithwalk + 6, 0);
     queenVictoria(m.foot + 8, 6.3);
     shore();

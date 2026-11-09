@@ -5,9 +5,12 @@ import { QUALITY } from '../core/Platform';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { M, color } from '../art/Materials';
 import { theta, toWorld, toRoad, forward, right } from '../world/Road';
-import { buildHuman, fanOutfit, wizardOutfit, influencerOutfit, D, ghostOutfit, mimeOutfit, piperOutfit, poseFlail, poseSplat, poseStand, Rig, touristOutfit } from '../art/Humanoid';
+import { buildHuman, fanOutfit, wizardOutfit, influencerOutfit, marcherOutfit, poseRun, D, ghostOutfit, mimeOutfit, piperOutfit, poseFlail, poseSplat, poseStand, Rig, touristOutfit } from '../art/Humanoid';
 
-export type TouristKind = 'tourist' | 'ghost' | 'mime' | 'piper' | 'hearts' | 'hibs' | 'wizard' | 'influencer';
+export type TouristKind = 'tourist' | 'ghost' | 'mime' | 'piper' | 'hearts' | 'hibs' | 'wizard' | 'influencer' | 'marcher';
+
+/** How a wee marcher behaves: walking back and forth across the street, blocking, or floating down. */
+export type MarchRole = 'walker' | 'blocker' | 'floater';
 
 class Tourist implements Entity {
   kind = 'tourist';
@@ -27,13 +30,19 @@ class Tourist implements Entity {
   /** Influencers: the phone screen that flashes. */
   private flash: THREE.Mesh | null = null;
   private flashT = 1 + Math.random() * 4;
+  /** Wee marchers: what they're doing, and the stretch of street they pace across. */
+  role: MarchRole | null = null;
+  private walkS = 0;
+  private walkU: [number, number] = [0, 0];
+  private walkDir = 1;
+  private umbrella: THREE.Object3D | null = null;
   /** Far away and standing still: one merged mesh per material instead of ~27 jointed parts. */
   private lod: THREE.Group | null = null;
   private lodOff = false;
 
   constructor(s: number, u: number, public type: TouristKind, public label: string, public points: number, yOff = 0) {
     const fan = type === 'hearts' || type === 'hibs';
-    const outfit = type === 'wizard' ? wizardOutfit(Math.random) : type === 'influencer' ? influencerOutfit(Math.random) : fan ? fanOutfit(type, Math.random) : type === 'ghost' ? ghostOutfit() : type === 'mime' ? mimeOutfit() : type === 'piper' ? piperOutfit() : touristOutfit(Math.random);
+    const outfit = type === 'marcher' ? marcherOutfit() : type === 'wizard' ? wizardOutfit(Math.random) : type === 'influencer' ? influencerOutfit(Math.random) : fan ? fanOutfit(type, Math.random) : type === 'ghost' ? ghostOutfit() : type === 'mime' ? mimeOutfit() : type === 'piper' ? piperOutfit() : touristOutfit(Math.random);
     this.rig = buildHuman(outfit);
     this.half = this.rig.height / 2;
     const p = toWorld(s, u, this.half + yOff + 0.03);
@@ -52,7 +61,7 @@ class Tourist implements Entity {
     G.physics.register(col, this);
     // fans are too busy shouting at each other to get out of the way
     // fans are too busy shouting at each other (and influencers at their phones) to get out of the way
-    this.dodgeChance = type === 'tourist' ? 0.45 : type === 'ghost' ? 0.2 : type === 'wizard' ? 0.25 : fan || type === 'influencer' ? 0.08 : 0;
+    this.dodgeChance = type === 'tourist' ? 0.45 : type === 'ghost' ? 0.2 : type === 'wizard' ? 0.25 : fan || type === 'influencer' ? 0.08 : 0; // marchers never look up
     this.rig.root.position.y = -this.half;
     this.mesh.add(this.rig.root);
     this.props();
@@ -178,6 +187,16 @@ class Tourist implements Entity {
   /** Off they go, in the most undignified way physics allows. */
   knockDown(other?: Entity) {
     this.dropLod();
+    if (this.type === 'marcher') {
+      // pop!
+      G.fx.dust(this.mesh.position.clone(), 0.5, 0x2fbf3a, 10);
+      G.fx.dust(this.mesh.position.clone(), 0.4, 0x2f55d4, 8);
+      if (this.umbrella) {
+        this.rig.root.remove(this.umbrella);
+        this.umbrella = null;
+      }
+      this.role = null;
+    }
     this.state = 'flying';
     this.downAt = G.time;
     this.body.setEnabledRotations(true, true, true, true);
@@ -207,7 +226,7 @@ class Tourist implements Entity {
       part.body.setAngvel({ x: 3, y: 18, z: 2 }, true);
       this.rig.hat = null;
     }
-    G.sfx.scream(this.type === 'mime' ? 0 : 0.8 + Math.random() * 0.6);
+    G.sfx.scream(this.type === 'mime' ? 0 : this.type === 'marcher' ? 2.2 + Math.random() * 0.4 : 0.8 + Math.random() * 0.6);
     if (!this.scored) {
       this.scored = true;
       G.scoring.award(this.label, this.points, this.mesh.position.clone().add(new THREE.Vector3(0, 1, 0)), other?.kind === 'trolley', this.type === 'piper' ? 'piper' : 'tourist');
@@ -216,6 +235,7 @@ class Tourist implements Entity {
         G.commentary.say('piper', true);
       } else if (this.type === 'mime') G.commentary.show('The mime screamed. Silently. Respect.');
       else if (this.type === 'wizard') G.commentary.maybe('wizard', 0.6);
+      else if (this.type === 'marcher') G.commentary.maybe('marcher', 0.5);
       else if (this.type === 'influencer') G.commentary.maybe('influencer', 0.6);
       else G.commentary.maybe('tourist', 0.6);
     }
@@ -223,6 +243,7 @@ class Tourist implements Entity {
 
   update(dt: number, trolleyPos: THREE.Vector3, trolleyVel: THREE.Vector3) {
     const t = this.body.translation();
+    if (this.role && this.state === 'idle') this.marchStep(t);
     if (this.state === 'idle' && this.dodgeChance > 0) {
       const dx = t.x - trolleyPos.x, dz = t.z - trolleyPos.z;
       const d = Math.hypot(dx, dz);
@@ -257,6 +278,29 @@ class Tourist implements Entity {
       this.body.lockRotations(true, true);
       G.fx.dizzy(this.mesh, this.half + 0.15, 4);
     }
+  }
+
+  /** Wee marchers: walk across the street, turn round at the kerb (or a blocker), never look up. */
+  private marchStep(t: { x: number; y: number; z: number }) {
+    const v = this.body.linvel();
+    if (this.role === 'floater') {
+      if (this.umbrella && v.y > -0.25 && t.y - G.terrain.heightAt(t.x, t.z) < this.half + 0.15) {
+        // landed: fold the brolly and join the march
+        this.rig.root.remove(this.umbrella);
+        this.umbrella = null;
+        this.body.setGravityScale(1, true);
+        this.body.setLinearDamping(0.4);
+        this.role = 'walker';
+      }
+      return;
+    }
+    if (this.role !== 'walker') return;
+    const { u } = toRoad(t.x, t.z);
+    if (u > this.walkU[1]) this.walkDir = -1;
+    else if (u < this.walkU[0]) this.walkDir = 1;
+    const R = right(this.walkS).multiplyScalar(this.walkDir);
+    this.body.setLinvel({ x: R.x * 0.75, y: v.y, z: R.z * 0.75 }, true);
+    this.faceYaw = Math.atan2(-R.z, R.x);
   }
 
   sync(dt: number) {
@@ -301,6 +345,15 @@ class Tourist implements Entity {
       rig.shoulderR.rotation.set(0.2, 0, 0.9);
       rig.elbowR.rotation.z = 0.9;
       rig.shoulderL.rotation.set(-0.3, 0, 1.6 + Math.sin(this.bob * 1.5) * 0.4); // "and on yer left..."
+    } else if (this.type === 'marcher') {
+      if (this.role === 'blocker') {
+        // arms out: none shall pass (they will)
+        rig.shoulderL.rotation.set(-1.45, 0, 0.1);
+        rig.shoulderR.rotation.set(1.45, 0, 0.1);
+      } else if (this.role === 'floater' && this.umbrella) {
+        rig.shoulderR.rotation.set(0.1, 0, 2.9);
+        rig.elbowR.rotation.z = 0.2;
+      } else poseRun(rig, this.bob * 8 + this.seed, 0.55);
     } else if (this.type === 'wizard') {
       // casting at passers-by: wand arm up and flicking
       const ph = this.bob * 3 + this.seed;
@@ -335,6 +388,30 @@ class Tourist implements Entity {
     } else if (this.photographer) {
       rig.shoulderR.rotation.set(0.1, 0, 1.55);
       rig.elbowR.rotation.z = 1.9;
+    }
+  }
+
+  /** Make a wee marcher pace back and forth across the street at s between uA and uB. */
+  march(role: MarchRole, s: number, uA: number, uB: number) {
+    this.role = role;
+    this.walkS = s;
+    this.walkU = [Math.min(uA, uB), Math.max(uA, uB)];
+    this.walkDir = Math.random() < 0.5 ? 1 : -1;
+    this.lodOff = true; // they move and animate: no frozen far-away model
+    if (role === 'floater') {
+      // drifting down from on high under a brolly
+      this.body.setGravityScale(0.13, true);
+      this.body.setLinearDamping(1.5);
+      const u = new THREE.Group();
+      const canopy = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), color(0xd7263d, 0.6));
+      canopy.scale.y = 0.55;
+      u.add(canopy);
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.4, 5), M.black());
+      shaft.position.y = -0.2;
+      u.add(shaft);
+      u.position.set(0.05, 0.62, 0);
+      this.rig.root.add(u);
+      this.umbrella = u;
     }
   }
 

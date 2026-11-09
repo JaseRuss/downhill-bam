@@ -35,6 +35,10 @@ Phones and tablets get their own version automatically (`src/core/Platform.ts`):
 
 On every device, people standing more than a short distance away are drawn as one merged model each (about 6 pieces instead of 27), and switch back to the full jointed figure as you get close or the moment they're knocked flying.
 
+## Nods to the local games industry
+
+No names or logos, just homages: troupes of **wee marchers** (green hair, blue robes) cross the street in single file, turning at the kerb, with a blocker in the middle and one floating down on an umbrella; they pop when hit, and flattening a whole troupe is NONE SAVED. Smash **POLIS cars** and old **police boxes** to raise a **wanted level** (★ in the HUD, plus a siren); five stars pays out. There are **PIXEL RAMPAGE** arcade cabinets on the pavements, with a top-down city on the screen. They're on both the Royal Mile and the long course.
+
 ## The launch
 
 Click to start and the camera swings round 90° to watch the Big Boot™ from the side. The swing meter is an arc that follows the boot: the marker rides up as the leg winds back (click for power), then falls with it (click in the green right where the boot meets the vehicle). Contact gives a rumble and a short freeze, then the camera follows the vehicle away and swings round behind it.

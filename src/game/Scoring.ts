@@ -73,6 +73,12 @@ const COSTS: Record<string, [number, string]> = {
   'Hibs Fan': [0, 'Hibs fan (wants it checked by VAR)'],
   'DERBY DAY!': [9500, 'Police overtime, Edinburgh derby'],
   'SKOOSH!': [1, 'One can of SKOOSH, fizzy ginger (no deposit returned)'],
+  'Wee Marcher': [0, 'Wee marcher (popped; there are always more)'],
+  'NONE SAVED!': [0, 'Rescue services (arrived too late)'],
+  'POLIS Car': [24000, 'Police car (POLIS), written off'],
+  'Police Box': [3800, 'Police box (listed, sadly)'],
+  'FIVE STARS!': [12000, 'Police helicopter callout'],
+  'Arcade Cabinet': [1500, 'Arcade cabinet (high score lost forever)'],
 };
 
 export class Scoring {

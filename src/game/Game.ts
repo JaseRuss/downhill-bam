@@ -21,6 +21,7 @@ import { Boot, ARC_R } from '../level/Boot';
 import { bake } from '../world/Batcher';
 import { Backdrop, HAAR } from '../world/Backdrop';
 import { initInteriors } from '../art/Interiors';
+import { resetWanted } from '../props/Homages';
 import { MobileUI } from '../ui/MobileUI';
 import { QUALITY, CAM } from '../core/Platform';
 import { FINISH_S, START_S, toWorld, theta, edgeL, edgeR, baseH } from '../world/Road';
@@ -188,6 +189,7 @@ export class Game {
     G.destruction.maxDebris = QUALITY.maxDebris;
     G.scoring = new Scoring(this.hud);
     G.crowd = new Crowd();
+    resetWanted();
     G.terrain = new Terrain(scene, G.physics);
     G.trolley = new Trolley(scene, START_S, 0, this.vehicle);
     this.level = this.tier >= 2 ? buildDiversion(this.tier) : buildRoyalMile();

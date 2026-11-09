@@ -46,6 +46,10 @@ const LINES: Record<string, string[]> = {
   results: ["The council will be in touch.", "Same time tomorrow?"],
   wizard: ["He's no' getting his letter now!", "That's no' a broomstick, son, it's a trolley!", "Wand down! Wand DOWN!", "Ten points from... somewhere!", "He's disapparated! Into a bin."],
   influencer: ["That's going on her story!", "Like and subscribe! From the gutter!", "Absolutely unfiltered!", "Selfie ruined! Unless it's a video. Oh, it's a video.", "Hashtag no regrets!"],
+  marcher: ["Pop! There goes another wee marcher!", "They just keep walking! Nobody told them about the trolley!", "Somebody should've given that one an umbrella.", "Oh no! Oh no! Oh no!"],
+  police: ["That's a polis car! Ye've done it now!", "Nee-naw nee-naw! The polis are coming!", "Assaulting a police box. That's a new one for the charge sheet.", "Another star on the wanted list!"],
+  fivestars: ["FIVE STARS! And no' the Fringe kind!", "Five stars! That's the whole of Police Scotland after ye now!"],
+  arcade: ["Game over! Insert another coin!", "New high score! Well, high damage.", "That cabinet's older than the Scottish Parliament."],
   skoosh: ["SKOOSH! Pure sugar, pure speed!", "A can of skoosh and he's away like a rocket!", "That's the fizz kicking in! Hold on tae yer kilt!", "One can and he's flying! Imagine two!"],
   // the Big Boot
   boot: ["THE BOOT HAS SPOKEN!", "Right up the jacksie!", "That's a size forty-seven, that.", "Ye've been booted, son!"],

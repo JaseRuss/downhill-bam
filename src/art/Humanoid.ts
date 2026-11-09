@@ -410,6 +410,15 @@ export function influencerOutfit(r: () => number): Outfit {
   };
 }
 
+/** A wee marcher: green hair, blue robe, about knee high. (A nod to a certain Dundee classic.) */
+export function marcherOutfit(): Outfit {
+  const blue = color(0x2f55d4, 0.6);
+  return {
+    skin: color(0xf3d2b8, 0.6), shirt: blue, longSleeves: true, legs: 'robe', legMat: blue, shoes: blue,
+    hair: color(0x2fbf3a, 0.7), hairStyle: 'wild', build: 1.15, height: 0.72,
+  };
+}
+
 export function mimeOutfit(): Outfit {
   return {
     skin: color(0xf7f7f7, 0.6), shirt: M.stripes('#111111', '#f2f2f2'), longSleeves: true,

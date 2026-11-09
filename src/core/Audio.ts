@@ -292,6 +292,14 @@ export class Sfx {
     this.tone('sine', 180, 40, 0.5, 0.3);
   }
 
+  /** Nee-naw, nee-naw. */
+  siren() {
+    for (let i = 0; i < 3; i++) {
+      this.tone('square', 960, 960, 0.34, 0.05, i * 0.72);
+      this.tone('square', 720, 720, 0.34, 0.05, i * 0.72 + 0.36);
+    }
+  }
+
   /** Can cracked open, a big fizz, and a rising whoosh of sugar. */
   fizz() {
     this.burst(0.06, 'bandpass', 3200, 3, 0.5, 0.001);
