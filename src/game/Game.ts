@@ -22,7 +22,7 @@ import { bake } from '../world/Batcher';
 import { Backdrop, HAAR } from '../world/Backdrop';
 import { initInteriors } from '../art/Interiors';
 import { MobileUI } from '../ui/MobileUI';
-import { QUALITY } from '../core/Platform';
+import { QUALITY, CAM } from '../core/Platform';
 import { FINISH_S, START_S, toWorld, theta, edgeL, edgeR, baseH } from '../world/Road';
 import * as Road from '../world/Road';
 
@@ -98,7 +98,7 @@ export class Game {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.camera = new THREE.PerspectiveCamera(62, 1, 0.1, 2600);
+    this.camera = new THREE.PerspectiveCamera(CAM.fov, 1, 0.1, 2600);
     this.input = new Input(canvas);
     this.mobile = new MobileUI(this.input);
     this.hud = new HUD(this.camera);
@@ -641,7 +641,7 @@ export class Game {
           this.swingBackT -= dt;
           if (this.swingBackT <= 0) {
             const f = this.launchDir();
-            const chase: Frame = { anchor: t.position, fwd: f, angle: 0, dist: 4.6, height: 1.9, ahead: 5, lookY: 0.9 };
+            const chase: Frame = { anchor: t.position, fwd: f, angle: 0, dist: 4.6 * CAM.dist, height: 1.9 * CAM.height, ahead: 5, lookY: 0.9 };
             this.rig.frameTo(chase, 0.9, { follow: true, then: 'chase' });
           }
         }

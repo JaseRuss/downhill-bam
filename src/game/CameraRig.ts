@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { H, toRoad, toWorld, forward, edgeL, edgeR } from '../world/Road';
 import * as Road from '../world/Road';
+import { CAM } from '../core/Platform';
 
 export interface TourStop {
   cam: THREE.Vector3;
@@ -44,7 +45,7 @@ export class CameraRig {
   private fFollow = false;
   private fThen: 'chase' | null = null;
   frame: Frame | null = null;
-  fovBase = 62;
+  fovBase = CAM.fov;
 
   constructor(public camera: THREE.PerspectiveCamera) {}
 
@@ -75,7 +76,7 @@ export class CameraRig {
 
   /** The camera placement for the aiming view (behind the vehicle). */
   static behind(target: THREE.Vector3, fwd: THREE.Vector3): Frame {
-    return { anchor: target.clone(), fwd: fwd.clone().setY(0).normalize(), angle: 0, dist: 4.2, height: 2.1, ahead: 8, lookY: -0.2 };
+    return { anchor: target.clone(), fwd: fwd.clone().setY(0).normalize(), angle: 0, dist: 4.2 * CAM.dist, height: 2.1 * CAM.height, ahead: 8, lookY: -0.2 };
   }
 
   /**
@@ -115,7 +116,7 @@ export class CameraRig {
       }
     } else if (this.mode === 'aim') {
       const d = fwd.clone().setY(0).normalize();
-      const want = target.clone().addScaledVector(d, -4.2).add(new THREE.Vector3(0, 2.1, 0));
+      const want = target.clone().addScaledVector(d, -4.2 * CAM.dist).add(new THREE.Vector3(0, 2.1 * CAM.height, 0));
       this.pos.lerp(want, 1 - Math.exp(-dt * 6));
       this.look.lerp(target.clone().addScaledVector(d, 8).add(new THREE.Vector3(0, -0.2, 0)), 1 - Math.exp(-dt * 6));
     } else if (this.mode === 'frame' && this.fA && this.fB) {
@@ -147,8 +148,8 @@ export class CameraRig {
       const { s } = toRoad(target.x, target.z);
       const roadF = forward(s);
       if (this.dir.dot(roadF) < 0.3) this.dir.lerp(roadF, 1 - Math.exp(-dt * 3)).normalize();
-      const back = 4.3 + Math.min(2.6, sp * 0.1);
-      const want = target.clone().addScaledVector(this.dir, -back).add(new THREE.Vector3(0, 1.9 + sp * 0.03, 0));
+      const back = (4.3 + Math.min(2.6, sp * 0.1)) * CAM.dist;
+      const want = target.clone().addScaledVector(this.dir, -back).add(new THREE.Vector3(0, (1.9 + sp * 0.03) * CAM.height, 0));
       // keep the camera inside the street (its real edges, which widen and narrow)
       const r = toRoad(want.x, want.z);
       const u = Math.max(-edgeL(r.s) + 1.2, Math.min(edgeR(r.s) - 1.2, r.u));
@@ -156,9 +157,9 @@ export class CameraRig {
       want.x = clamped.x;
       want.z = clamped.z;
       want.y = Math.max(want.y, H(r.s, u) + 1.3);
-      this.pos.lerp(want, 1 - Math.exp(-dt * 5));
+      this.pos.lerp(want, 1 - Math.exp(-dt * CAM.follow));
       this.look.lerp(target.clone().addScaledVector(this.dir, 5).add(new THREE.Vector3(0, 0.9, 0)), 1 - Math.exp(-dt * 8));
-      fov += Math.min(16, sp * 0.6);
+      fov += Math.min(CAM.fovSpeed, sp * 0.6);
     } else if (this.mode === 'orbit') {
       this.orbitA += dt * 0.25;
       const want = target.clone().add(new THREE.Vector3(Math.sin(this.orbitA) * this.orbitR, this.orbitH, Math.cos(this.orbitA) * this.orbitR));

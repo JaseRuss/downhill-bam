@@ -29,6 +29,14 @@ function detect() {
 
 export const PLATFORM = detect();
 
+/**
+ * Chase camera framing. Phones get it tighter and narrower so the vehicle isn't a speck on a
+ * small screen: distance and height are multipliers on the desktop camera.
+ */
+export const CAM = PLATFORM.mobile
+  ? { dist: 0.74, height: 0.84, fov: 55, fovSpeed: 10, follow: 7.5 }
+  : { dist: 1, height: 1, fov: 62, fovSpeed: 16, follow: 5 };
+
 /** How hard the game works the device. */
 export interface Quality {
   /** Cap on the render resolution multiplier (the mobile build adjusts below this on the fly). */
