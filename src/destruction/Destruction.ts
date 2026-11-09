@@ -310,9 +310,11 @@ export class Destruction {
       }
       this.debris = keep;
     }
+    // only tidy up things that have been knocked about and left behind (props still waiting
+    // further down the course are loose too, and must stay put)
     for (const p of this.loose) {
       const t = p.body.translation();
-      if (t.y < -40 || (far(t, 95) && p.body.isSleeping())) this.removePart(p);
+      if (t.y < -40 || (far(t, 95) && p.body.isSleeping() && (p.scored || p.bornAt > 0))) this.removePart(p);
     }
   }
 

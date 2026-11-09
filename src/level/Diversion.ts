@@ -152,7 +152,8 @@ function scatterAlong(from: number, to: number, exclude: [number, number][], gul
 // the castle (it can't sit where the Royal Mile's rock does: King's Stables Road runs under it)
 // =====================================================================
 function castleHill() {
-  const rockMat = color(0x4a4640, 1);
+  const rockMat = color(0x7a7165, 0.95);
+  const crag = new THREE.MeshStandardMaterial({ color: 0x7a7165, roughness: 0.95, flatShading: true });
   const stone = M.stone(34, 46, 11, 4, 2);
   const dark = M.stone(30, 34, 12, 2, 2);
   const g = roadGroup(-50, 0, 0);
@@ -174,14 +175,15 @@ function castleHill() {
     const e = edgeR(s);
     const k = Math.sin(((s - s0) / (s1 - s0)) * Math.PI);
     const R = 7 + r() * 4;
-    const m = new THREE.Mesh(new THREE.DodecahedronGeometry(R, 1), rockMat);
-    const p = toWorld(s, e + R * 0.85, 0);
+    // crags stretched upwards only (spun about the vertical, so they never bulge into the street)
+    const m = new THREE.Mesh(new THREE.DodecahedronGeometry(R, 1), crag);
+    const p = toWorld(s, e + R * 1.05, 0);
     m.position.set(p.x, baseH(s) - 2 + R * (0.3 + k * 0.9), p.z);
     m.scale.set(1, 1.3 + k * 1.6, 1);
-    m.rotation.set(r() * 3, r() * 3, r() * 3);
+    m.rotation.y = r() * 3;
     add(m);
     // a higher tier of rock behind
-    const m2 = new THREE.Mesh(new THREE.DodecahedronGeometry(R * 1.3, 1), rockMat);
+    const m2 = new THREE.Mesh(new THREE.DodecahedronGeometry(R * 1.3, 1), crag);
     const p2 = toWorld(s, e + R * 2.2, 0);
     m2.position.set(p2.x, baseH(s) + 6 + k * 16, p2.z);
     m2.scale.set(1, 1.4, 1);
@@ -1024,7 +1026,7 @@ const TOUR_LONG: TourInfo[] = [
   { name: 'Princes Street Christmas Market', pts: 'BIG WHEEL 4,000 · TRAM-BOOZLED 3,000', blurb: 'Knock the big wheel off its legs and watch it roll down Princes Street. And look out for the tram.', s: 0, cam: [0, 0, 4.5], look: [0, 9, 6] },
   { name: 'The Scott Monument', pts: 'SIGHTSEEING ONLY', blurb: 'A 61-metre gothic rocket. You cannot reach it. Please stop trying.', s: 0, cam: [0, 3, 4], look: [0, 28, 24] },
   { name: 'The Balmoral Clock', pts: 'ALWAYS 3 MINUTES FAST', blurb: 'The East End, and the corner of the Balmoral. Leith Walk lies beyond.', s: 0, cam: [0, -1, 4], look: [0, 16, 22] },
-  { name: 'The Walnut Whip', pts: 'LOCAL LANDMARK (DISPUTED)', blurb: 'Down Leith Street past the bronze ribbon hotel. Nobody calls it anything else.', s: 0, cam: [0, -2, 4], look: [0, 22, 24] },
+  { name: 'The Walnut Whip', pts: 'LOCAL LANDMARK (DISPUTED)', blurb: 'Down Leith Street past the bronze ribbon hotel. Nobody calls it anything else.', s: 0, cam: [0, -4, 7], look: [0, 18, 28] },
   { name: 'Leith Walk Tram Works', pts: 'DIGGER 1,500 · SKIP 600 · CONES', blurb: 'A mile of roadworks. Slalom the closures or plough straight through. The council will never notice.', s: 0, cam: [0, 0, 5], look: [0, 0, 0] },
   { name: 'Queen Victoria', pts: '2,500 · WE ARE NOT AMUSED 2,000', blurb: 'Her Majesty at the Foot of the Walk. Clip her plinth.', s: 0, cam: [0, -1, 3], look: [0, 6.4, 3] },
   { name: 'Newhaven Lighthouse', pts: 'SEAGULLS', blurb: 'The harbour. The sea is right there. Do not look at the sea. Look at the road.', s: 0, cam: [0, -2, 4], look: [0, 21, 8] },
@@ -1046,7 +1048,7 @@ function longTour(): TourInfo[] {
   at(8, MARKS.princes + 120, 26, 24);
   at(9, MARKS.princes + 210, 14, 4);
   at(10, MARKS.eastend - 4, 16, 10);
-  at(11, MARKS.leithst + 30, 16, 2);
+  at(11, MARKS.leithst + 30, 34, 0);
   at(12, MARKS.leithwalk + 40, 22, 20);
   at(13, MARKS.foot + 8, 14, 0);
   at(14, Road.SEA_S0 + 12, 12, 0);
