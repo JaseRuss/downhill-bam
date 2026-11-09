@@ -66,26 +66,30 @@ export class Boot {
     this.pivot.add(this.leg);
     scene.add(this.pivot);
 
-    // the gantry it hangs from
+    // the gantry it hangs from: one post out on the left pavement and an arm reaching over the
+    // street, so nothing stands between the cameras (behind, and off to the right) and the boot
     const gs = s - this.back;
     const g = (this.gantry = roadGroup(gs, 0, 0));
     const wood = M.wood(28, 34, 6);
-    for (const x of [-1.9, 1.9]) g.add(mesh(new THREE.BoxGeometry(0.3, HIP_H + 0.9, 0.3), wood, x, (HIP_H + 0.9) / 2, 0));
-    g.add(mesh(new THREE.BoxGeometry(4.2, 0.34, 0.4), wood, 0, HIP_H + 0.75, 0));
-    for (const x of [-1.9, 1.9]) {
-      const brace = mesh(new THREE.BoxGeometry(0.14, 2.2, 0.14), wood, x, 1.0, -0.7);
-      brace.rotation.x = -0.6;
-      g.add(brace);
-    }
+    const POST_U = -5.6; // local x = -u
+    const topY = HIP_H + 0.75;
+    g.add(mesh(new THREE.BoxGeometry(0.42, topY + 0.2, 0.42), wood, -POST_U, (topY + 0.2) / 2, 0));
+    g.add(mesh(new THREE.BoxGeometry(-POST_U + 1.6, 0.36, 0.42), wood, (-POST_U - 1.6) / 2, topY, 0));
+    // diagonal brace under the arm
+    const brace = mesh(new THREE.BoxGeometry(0.16, 3.0, 0.16), wood, -POST_U - 1.05, topY - 1.05, 0);
+    brace.rotation.z = Math.PI / 4;
+    g.add(brace);
+    // a wee hinge block where the leg hangs
+    g.add(mesh(new THREE.BoxGeometry(1.4, 0.3, 0.6), M.metal(), 0, topY - 0.3, 0));
     const plate = new THREE.Mesh(new THREE.PlaneGeometry(4.0, 0.6), mapMat(signTex(['THE BIG BOOT™ · TROLLEY LAUNCHER'], '#5a1420', '#f2c14e', 640, 96)));
-    plate.position.set(0, HIP_H + 1.25, 0.21);
+    plate.position.set(-POST_U - 2.6, topY + 0.5, 0.22);
     plate.rotation.y = Math.PI;
     const plate2 = plate.clone();
     plate2.rotation.y = 0;
-    plate2.position.z = -0.21;
+    plate2.position.z = -0.22;
     g.add(plate, plate2);
     scene.add(g);
-    for (const u of [-1.9, 1.9]) staticBox(gs, u, baseH(gs) + (HIP_H + 0.9) / 2, 0.15, (HIP_H + 0.9) / 2, 0.15);
+    staticBox(gs, POST_U, baseH(gs) + (topY + 0.2) / 2, 0.21, (topY + 0.2) / 2, 0.21);
     this.aim(0);
   }
 
