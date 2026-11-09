@@ -5,9 +5,9 @@ import { QUALITY } from '../core/Platform';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { M, color } from '../art/Materials';
 import { theta, toWorld, toRoad, forward, right } from '../world/Road';
-import { buildHuman, fanOutfit, ghostOutfit, mimeOutfit, piperOutfit, poseFlail, poseSplat, poseStand, Rig, touristOutfit } from '../art/Humanoid';
+import { buildHuman, fanOutfit, wizardOutfit, influencerOutfit, D, ghostOutfit, mimeOutfit, piperOutfit, poseFlail, poseSplat, poseStand, Rig, touristOutfit } from '../art/Humanoid';
 
-export type TouristKind = 'tourist' | 'ghost' | 'mime' | 'piper' | 'hearts' | 'hibs';
+export type TouristKind = 'tourist' | 'ghost' | 'mime' | 'piper' | 'hearts' | 'hibs' | 'wizard' | 'influencer';
 
 class Tourist implements Entity {
   kind = 'tourist';
@@ -24,13 +24,16 @@ class Tourist implements Entity {
   seed = Math.random() * 10;
   half: number;
   photographer = Math.random() < 0.35;
+  /** Influencers: the phone screen that flashes. */
+  private flash: THREE.Mesh | null = null;
+  private flashT = 1 + Math.random() * 4;
   /** Far away and standing still: one merged mesh per material instead of ~27 jointed parts. */
   private lod: THREE.Group | null = null;
   private lodOff = false;
 
   constructor(s: number, u: number, public type: TouristKind, public label: string, public points: number, yOff = 0) {
     const fan = type === 'hearts' || type === 'hibs';
-    const outfit = fan ? fanOutfit(type, Math.random) : type === 'ghost' ? ghostOutfit() : type === 'mime' ? mimeOutfit() : type === 'piper' ? piperOutfit() : touristOutfit(Math.random);
+    const outfit = type === 'wizard' ? wizardOutfit(Math.random) : type === 'influencer' ? influencerOutfit(Math.random) : fan ? fanOutfit(type, Math.random) : type === 'ghost' ? ghostOutfit() : type === 'mime' ? mimeOutfit() : type === 'piper' ? piperOutfit() : touristOutfit(Math.random);
     this.rig = buildHuman(outfit);
     this.half = this.rig.height / 2;
     const p = toWorld(s, u, this.half + yOff + 0.03);
@@ -48,7 +51,8 @@ class Tourist implements Entity {
     this.mass = this.body.mass() || 45;
     G.physics.register(col, this);
     // fans are too busy shouting at each other to get out of the way
-    this.dodgeChance = type === 'tourist' ? 0.45 : type === 'ghost' ? 0.2 : fan ? 0.08 : 0;
+    // fans are too busy shouting at each other (and influencers at their phones) to get out of the way
+    this.dodgeChance = type === 'tourist' ? 0.45 : type === 'ghost' ? 0.2 : type === 'wizard' ? 0.25 : fan || type === 'influencer' ? 0.08 : 0;
     this.rig.root.position.y = -this.half;
     this.mesh.add(this.rig.root);
     this.props();
@@ -77,6 +81,65 @@ class Tourist implements Entity {
       const lantern = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.16, 0.1), M.emissive(0xffb84d, 2));
       lantern.position.y = -0.32;
       r.elbowR.add(lantern);
+    } else if (this.type === 'wizard') {
+      const s = r.height / 1.75, R = D.headR * s;
+      // round specs
+      for (const z of [-1, 1]) {
+        const lens = new THREE.Mesh(new THREE.TorusGeometry(R * 0.26, R * 0.04, 5, 14), M.black());
+        lens.position.set(R * 0.98, R * 0.2, z * R * 0.36);
+        lens.rotation.y = Math.PI / 2;
+        r.head.add(lens);
+      }
+      // a striped scarf in one of four colour pairs
+      const pairs: [string, string][] = [['#7a1f1f', '#d4a017'], ['#1d5c3a', '#b8b8b8'], ['#1b3f8a', '#b08d57'], ['#d4a017', '#222222']];
+      const [a, b] = pairs[Math.floor(Math.random() * pairs.length)];
+      const sc = M.stripes(a, b);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.035, 6, 14), sc);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = 0.33;
+      r.chest.add(ring);
+      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.4, 0.09), sc);
+      tail.position.set(0.12, 0.12, -0.05);
+      r.chest.add(tail);
+      // the wand
+      const wand = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.012, 0.34, 6), color(0x5a3a22, 0.6));
+      wand.position.set(0.08, -0.36, 0);
+      wand.rotation.z = -1.3;
+      r.elbowR.add(wand);
+      // a pointy hat on some
+      if (Math.random() < 0.4) {
+        if (r.hat) r.hat.visible = false;
+        const hat = new THREE.Group();
+        const felt = color(Math.random() < 0.5 ? 0x2a1d3a : 0x161616, 0.9);
+        hat.add(new THREE.Mesh(new THREE.CylinderGeometry(R * 1.9, R * 1.9, R * 0.08, 16), felt));
+        const tip = new THREE.Mesh(new THREE.ConeGeometry(R * 1.05, R * 3.6, 12), felt);
+        tip.position.y = R * 1.8;
+        tip.rotation.z = 0.25;
+        hat.add(tip);
+        hat.position.set(-0.01 * s, R * 0.95, 0);
+        r.head.add(hat);
+      }
+    } else if (this.type === 'influencer') {
+      const s = r.height / 1.75, R = D.headR * s;
+      const shades = new THREE.Mesh(new THREE.BoxGeometry(R * 0.22, R * 0.3, R * 1.15), color(0x0a0a0a, 0.15, 0.6));
+      shades.position.set(R * 0.98, R * 0.22, 0);
+      r.head.add(shades);
+      // a phone held out at arm's length, on a selfie stick half the time
+      const stick = Math.random() < 0.5;
+      const len = stick ? 0.75 : 0.02;
+      if (stick) {
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, len, 6), M.steel());
+        pole.position.y = -0.3 - len / 2;
+        r.elbowR.add(pole);
+      }
+      const phone = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.15, 0.012), M.black());
+      phone.position.y = -0.33 - len;
+      phone.rotation.x = Math.PI / 2;
+      r.elbowR.add(phone);
+      this.flash = new THREE.Mesh(new THREE.PlaneGeometry(0.065, 0.13), new THREE.MeshBasicMaterial({ color: 0x223344 }));
+      this.flash.position.set(0, 0, -0.007);
+      this.flash.rotation.y = Math.PI;
+      phone.add(this.flash);
     } else if (this.type === 'hearts' || this.type === 'hibs') {
       // a two-colour bar scarf round the neck
       const sc = this.type === 'hearts' ? M.stripes('#7a1f3d', '#f2f2f2') : M.stripes('#0b6b3a', '#f2f2f2');
@@ -152,6 +215,8 @@ class Tourist implements Entity {
         G.sfx.sadPipes();
         G.commentary.say('piper', true);
       } else if (this.type === 'mime') G.commentary.show('The mime screamed. Silently. Respect.');
+      else if (this.type === 'wizard') G.commentary.maybe('wizard', 0.6);
+      else if (this.type === 'influencer') G.commentary.maybe('influencer', 0.6);
       else G.commentary.maybe('tourist', 0.6);
     }
   }
@@ -236,6 +301,27 @@ class Tourist implements Entity {
       rig.shoulderR.rotation.set(0.2, 0, 0.9);
       rig.elbowR.rotation.z = 0.9;
       rig.shoulderL.rotation.set(-0.3, 0, 1.6 + Math.sin(this.bob * 1.5) * 0.4); // "and on yer left..."
+    } else if (this.type === 'wizard') {
+      // casting at passers-by: wand arm up and flicking
+      const ph = this.bob * 3 + this.seed;
+      rig.shoulderR.rotation.set(0.25, 0, 1.5 + Math.sin(ph) * 0.45);
+      rig.elbowR.rotation.z = 0.5 + Math.max(0, Math.sin(ph * 2.3)) * 0.6;
+      rig.head.rotation.z = 0.08;
+    } else if (this.type === 'influencer') {
+      // arm out holding the phone up, peace sign, head tilted for the good side
+      rig.shoulderR.rotation.set(0.45, 0, 2.35 + Math.sin(this.bob * 0.7 + this.seed) * 0.08);
+      rig.elbowR.rotation.z = 0.12;
+      rig.shoulderL.rotation.set(-0.25, 0, 1.15);
+      rig.elbowL.rotation.z = 2.1;
+      rig.head.rotation.set(0.18 + Math.sin(this.bob * 0.5 + this.seed) * 0.08, 0, 0.12);
+      this.flashT -= dt;
+      if (this.flash) {
+        const m = this.flash.material as THREE.MeshBasicMaterial;
+        if (this.flashT < 0) {
+          m.color.setHex(0xffffff);
+          if (this.flashT < -0.08) this.flashT = 2 + Math.random() * 5;
+        } else m.color.setHex(0x223344);
+      }
     } else if (this.type === 'hearts' || this.type === 'hibs') {
       // squaring up: fists pumping, leaning in, bouncing on their toes
       const ph = this.bob * 5 + this.seed * 3;

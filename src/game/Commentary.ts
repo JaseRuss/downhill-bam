@@ -44,6 +44,8 @@ const LINES: Record<string, string[]> = {
   stopped: ["And he's... stopped. Well. That's that then.", "Out of steam. Like the rest of us."],
   wreck: ["It's a write-off. The trolley, the street, everything."],
   results: ["The council will be in touch.", "Same time tomorrow?"],
+  wizard: ["He's no' getting his letter now!", "That's no' a broomstick, son, it's a trolley!", "Wand down! Wand DOWN!", "Ten points from... somewhere!", "He's disapparated! Into a bin."],
+  influencer: ["That's going on her story!", "Like and subscribe! From the gutter!", "Absolutely unfiltered!", "Selfie ruined! Unless it's a video. Oh, it's a video.", "Hashtag no regrets!"],
   skoosh: ["SKOOSH! Pure sugar, pure speed!", "A can of skoosh and he's away like a rocket!", "That's the fizz kicking in! Hold on tae yer kilt!", "One can and he's flying! Imagine two!"],
   // the Big Boot
   boot: ["THE BOOT HAS SPOKEN!", "Right up the jacksie!", "That's a size forty-seven, that.", "Ye've been booted, son!"],

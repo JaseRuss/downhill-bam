@@ -386,6 +386,30 @@ export function fanOutfit(team: 'hearts' | 'hibs', r: () => number): Outfit {
   };
 }
 
+/** A wizard-film fan: black robe over black, the hair is anybody's. */
+export function wizardOutfit(r: () => number): Outfit {
+  const pick = <T,>(a: T[]) => a[Math.floor(r() * a.length)];
+  return {
+    skin: color(pick(SKINS), 0.7), shirt: color(0x1c1c1e, 0.85), longSleeves: true,
+    legs: 'robe', legMat: color(0x151517, 0.9), shoes: M.black(),
+    hair: color(pick(HAIR), 0.9), hairStyle: pick(['wild', 'short', 'long', 'bun'] as HairStyle[]),
+    build: 0.85 + r() * 0.3, height: 1.45 + r() * 0.4,
+  };
+}
+
+/** An Instagrammer: something bright, something pastel, a cap now and then. */
+export function influencerOutfit(r: () => number): Outfit {
+  const pick = <T,>(a: T[]) => a[Math.floor(r() * a.length)];
+  const hat: HatStyle = r() < 0.3 ? 'cap' : r() < 0.15 ? 'bucket' : null;
+  return {
+    skin: color(pick(SKINS), 0.65), shirt: color(pick([0xff5fa2, 0xf6f1e9, 0xc8a2ff, 0xffd84d, 0x7fe0c8, 0xff8a5c]), 0.7), longSleeves: r() < 0.3,
+    legs: r() < 0.5 ? 'shorts' : 'trousers', legMat: color(pick([0xe8e0d0, 0x87a8d0, 0x2b2d42, 0xf2f2f2]), 0.8), shoes: color(0xf6f6f6, 0.5),
+    hair: color(pick(HAIR), 0.85), hairStyle: pick(['long', 'bun', 'long', 'short'] as HairStyle[]),
+    hat, hatMat: color(pick([0xf6f1e9, 0x111111, 0xff5fa2]), 0.8),
+    build: 0.9 + r() * 0.15, height: 1.6 + r() * 0.2,
+  };
+}
+
 export function mimeOutfit(): Outfit {
   return {
     skin: color(0xf7f7f7, 0.6), shirt: M.stripes('#111111', '#f2f2f2'), longSleeves: true,

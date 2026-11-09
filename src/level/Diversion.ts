@@ -290,6 +290,48 @@ function victoriaStreet() {
   for (let s = sA + 4; s < sB - 4; s += 9) G.crowd.tourist(s, -(edgeL(s) + 1.4), 'tourist', baseH(s + 3) - 0.4 + 5.12 - H(s, -(edgeL(s) + 1.4)));
   G.crowd.pigeons((sA + sB) / 2, -(edgeL((sA + sB) / 2) + 1.4), 6);
 
+  // the street the wizard films borrowed from: fans in robes waving wands, and influencers
+  // posing for selfies (a few of them in the middle of the road, naturally)
+  const people = rng(1997);
+  const bsAt = MARKS.victoria + 26;
+  const wizards: { scored: boolean }[] = [], influencers: { scored: boolean }[] = [];
+  const spot = (inRoad: boolean): [number, number] => {
+    for (let k = 0; k < 20; k++) {
+      const s = sA + 2 + people() * (sB - sA - 4);
+      const side = people() < 0.5 ? -1 : 1;
+      const u = inRoad ? side * (0.8 + people() * 2.6) : side * (5.3 + people() * Math.min(1.6, edge(s, side) - 6.2));
+      if (!inRoad && side > 0 && Math.abs(s - bsAt) < 6) continue; // leave the brooms clear
+      return [s, u];
+    }
+    return [sA + 10, 5.6];
+  };
+  for (let i = 0; i < 10; i++) {
+    const [s, u] = spot(i < 2);
+    wizards.push(G.crowd.tourist(s, u, 'wizard', 0, 'Wizard Fan', 150));
+  }
+  for (let i = 0; i < 8; i++) {
+    const [s, u] = spot(i < 3);
+    const t = G.crowd.tourist(s, u, 'influencer', 0, 'Influencer', 150);
+    // the ones in the road pose with their backs to the shops, phone towards the traffic
+    if (Math.abs(u) < 4) {
+      const f = forward(s).multiplyScalar(-1);
+      t.faceYaw = Math.atan2(-f.z, f.x) + (people() - 0.5) * 0.6;
+    }
+    influencers.push(t);
+  }
+  const wandsDown = once(() => {
+    G.scoring.award('WANDS DOWN!', 1000, G.trolley.position.add(new THREE.Vector3(0, 2.5, 0)), true, 'wizards');
+    G.commentary.show("Five wizards down! Somebody owl the council.", 3.5);
+  });
+  const viral = once(() => {
+    G.scoring.award('GONE VIRAL!', 1000, G.trolley.position.add(new THREE.Vector3(0, 2.5, 0)), true, 'influencers');
+    G.commentary.show("Five influencers flattened! That's going viral for all the wrong reasons.", 3.5);
+  });
+  G.updaters.push(() => {
+    if (wizards.filter((w) => w.scored).length >= 5) wandsDown();
+    if (influencers.filter((w) => w.scored).length >= 5) viral();
+  });
+
   // the broom shop, with a rack of besoms on the pavement
   const bs = MARKS.victoria + 26;
   tenement(bs - 6, 12, 1, 13, 4711, 'BROOMS & BESOMS · EST. 1692', edgeR(bs), 0x6b3f8a, 9);
