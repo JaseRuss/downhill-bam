@@ -431,7 +431,14 @@ export class Game {
 
   endRun() {
     this.setState('ending');
-    this.rig.mode = 'orbit';
+    // crane up and back, still looking down the street the way we were going (circling round
+    // would show the backs of the buildings and the gaps behind the scenery)
+    if (!G.trolley.splashed) {
+      const p = G.trolley.position;
+      const f = Road.forward(Road.toRoad(p.x, p.z).s);
+      const from: Frame = this.rig.frame ?? { anchor: p.clone(), fwd: f, angle: 0, dist: 4.6 * CAM.dist, height: 1.9 * CAM.height, ahead: 5, lookY: 0.9 };
+      this.rig.frameTo({ anchor: p, fwd: f, angle: 0, dist: 7.5, height: 4.2, ahead: 9, lookY: 0.2 }, 2.4, { from: { ...from, anchor: this.rig.pos.clone().addScaledVector(f, from.dist).setY(p.y) }, follow: true });
+    }
     this.sfx.engineHum(false, 0);
     if (!this.finished && !G.trolley.splashed) {
       if (!this.spec.engine && this.tier >= 2 && G.trolley.roadS > Road.ENGINE_S - 20 && !G.trolley.ejected) this.commentary.say('stalled', true);
@@ -506,9 +513,9 @@ export class Game {
     const p = t.position;
     p.y = Road.SEA_Y + 0.2;
     this.splashAt = p.clone();
-    this.rig.mode = 'orbit';
-    this.rig.orbitR = 16;
-    this.rig.orbitH = 6;
+    // watch it go down from the shore side, looking out over the Forth
+    const f = Road.forward(Road.MARKS.end);
+    this.rig.frameTo({ anchor: p.clone(), fwd: f, angle: 0, dist: 12, height: 5, ahead: 2.5, lookY: -0.5 }, 1.6, { from: { anchor: this.rig.pos.clone().addScaledVector(f, 6), fwd: f, angle: 0, dist: 6, height: 0, ahead: 6, lookY: 0 } });
     G.fx.splash(p, 0xd8eef5, 70);
     G.fx.splash(p.clone().add(new THREE.Vector3(0, 0.5, 0)), 0xffffff, 40);
     this.sfx.splash();
