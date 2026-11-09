@@ -361,16 +361,20 @@ export const SHOP_NAMES = [
 ];
 
 /** Painted shopfront with a gold-lettered fascia. */
-export function shopTex(name: string, seed: number): THREE.Texture {
+/** A painted shopfront, and (desktop only: phones are short of memory) a glow map for its windows. */
+export function shopTex(name: string, seed: number): [THREE.Texture, THREE.Texture | null] {
   return memo(`shop_${name}_${seed}`, () => {
     const W = 512, Hh = 256;
-    const c = drawCanvas(W, Hh);
-    const g = c.getContext('2d')!;
+    const glow = QUALITY.texScale === 1;
+    const c = drawCanvas(W, Hh), e = glow ? drawCanvas(W, Hh) : canvas(1, 1);
+    const g = c.getContext('2d')!, ge = e.getContext('2d')!;
     const r = rng(seed);
     const paints = ['#1e3d2f', '#5a1420', '#14284a', '#1c1c1c', '#3d2a5a', '#0f4a4a', '#6a3a12'];
     const paint = paints[Math.floor(r() * paints.length)];
     g.fillStyle = paint;
     g.fillRect(0, 0, W, Hh);
+    ge.fillStyle = '#000';
+    ge.fillRect(0, 0, W, Hh);
     // fascia
     g.fillStyle = 'rgba(0,0,0,.35)';
     g.fillRect(0, 56, W, 6);
@@ -393,6 +397,8 @@ export function shopTex(name: string, seed: number): THREE.Texture {
       grad.addColorStop(1, '#b77b3d');
       g.fillStyle = grad;
       g.fillRect(x, 80, w, 140);
+      ge.fillStyle = '#d99a4a';
+      ge.fillRect(x, 80, w, 140);
       // goods on display
       for (let k = 0; k < w / 22; k++) {
         g.fillStyle = ['#c22', '#2a6', '#24a', '#eee', '#a63', '#dd3'][Math.floor(r() * 6)];
@@ -409,7 +415,7 @@ export function shopTex(name: string, seed: number): THREE.Texture {
     g.fillRect(doorX + 44, 160, 5, 5);
     g.fillStyle = 'rgba(0,0,0,.4)';
     g.fillRect(0, 236, W, 20);
-    return tex(c);
+    return [tex(c), glow ? tex(e) : null] as [THREE.Texture, THREE.Texture | null];
   });
 }
 
