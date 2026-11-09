@@ -54,8 +54,11 @@ export interface Quality {
   maxDebris: number;
   /** Lower the resolution automatically when the frame rate drops. */
   dynamicResolution: boolean;
+  /** Resolution of the big painted textures (stone, facades, shopfronts). iOS kills pages whose
+   *  canvases pass ~384 MB, and the full long course needs ~600 MB of them at full size. */
+  texScale: number;
 }
 
 export const QUALITY: Quality = PLATFORM.mobile
-  ? { pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5), antialias: false, shadowMap: 1024, cullDistance: 100, lodDistance: 14, crowd: 0.5, city: 0.55, maxDebris: 180, dynamicResolution: true }
-  : { pixelRatio: Math.min(window.devicePixelRatio || 1, 1.75), antialias: true, shadowMap: 2048, cullDistance: 165, lodDistance: 22, crowd: 1, city: 1, maxDebris: 420, dynamicResolution: false };
+  ? { pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5), antialias: false, shadowMap: 1024, cullDistance: 100, lodDistance: 14, crowd: 0.5, city: 0.55, maxDebris: 180, dynamicResolution: true, texScale: 0.5 }
+  : { pixelRatio: Math.min(window.devicePixelRatio || 1, 1.75), antialias: true, shadowMap: 2048, cullDistance: 165, lodDistance: 22, crowd: 1, city: 1, maxDebris: 420, dynamicResolution: false, texScale: 1 };

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { QUALITY } from '../core/Platform';
 
 /** Small seeded RNG so procedural art is stable between runs. */
 export function rng(seed: number) {
@@ -14,6 +15,17 @@ export function rng(seed: number) {
 export function canvas(w: number, h: number) {
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
+  return c;
+}
+
+/**
+ * A canvas you draw on in w x h units, stored at QUALITY.texScale resolution (half size on phones,
+ * where memory is tight). The context comes pre-scaled, so drawing code doesn't change.
+ */
+export function drawCanvas(w: number, h: number) {
+  const k = QUALITY.texScale;
+  const c = canvas(Math.round(w * k), Math.round(h * k));
+  if (k !== 1) c.getContext('2d')!.scale(k, k);
   return c;
 }
 
@@ -76,7 +88,7 @@ function memo<T>(key: string, fn: () => T): T {
 
 export function ashlarTex(hue = 35, light = 52, seed = 1) {
   return memo(`ash${hue}_${light}_${seed}`, () => {
-    const c = canvas(512, 512);
+    const c = drawCanvas(512, 512);
     drawAshlar(c.getContext('2d')!, 512, 512, seed, hue, light);
     return tex(c);
   });
@@ -256,7 +268,7 @@ export const TARTANS = {
 export function facadeTex(hue: number, light: number, seed: number): [THREE.Texture, THREE.Texture] {
   return memo(`facade${hue}_${light}_${seed}`, () => {
     const W = 512, Hh = 512;
-    const c = canvas(W, Hh), e = canvas(W, Hh);
+    const c = drawCanvas(W, Hh), e = drawCanvas(W, Hh);
     const g = c.getContext('2d')!, ge = e.getContext('2d')!;
     const r = rng(seed);
     drawAshlar(g, W, Hh, seed * 13 + 1, hue, light, 22);
@@ -349,18 +361,16 @@ export const SHOP_NAMES = [
 ];
 
 /** Painted shopfront with a gold-lettered fascia. */
-export function shopTex(name: string, seed: number): [THREE.Texture, THREE.Texture] {
+export function shopTex(name: string, seed: number): THREE.Texture {
   return memo(`shop_${name}_${seed}`, () => {
     const W = 512, Hh = 256;
-    const c = canvas(W, Hh), e = canvas(W, Hh);
-    const g = c.getContext('2d')!, ge = e.getContext('2d')!;
+    const c = drawCanvas(W, Hh);
+    const g = c.getContext('2d')!;
     const r = rng(seed);
     const paints = ['#1e3d2f', '#5a1420', '#14284a', '#1c1c1c', '#3d2a5a', '#0f4a4a', '#6a3a12'];
     const paint = paints[Math.floor(r() * paints.length)];
     g.fillStyle = paint;
     g.fillRect(0, 0, W, Hh);
-    ge.fillStyle = '#000';
-    ge.fillRect(0, 0, W, Hh);
     // fascia
     g.fillStyle = 'rgba(0,0,0,.35)';
     g.fillRect(0, 56, W, 6);
@@ -383,8 +393,6 @@ export function shopTex(name: string, seed: number): [THREE.Texture, THREE.Textu
       grad.addColorStop(1, '#b77b3d');
       g.fillStyle = grad;
       g.fillRect(x, 80, w, 140);
-      ge.fillStyle = '#d99a4a';
-      ge.fillRect(x, 80, w, 140);
       // goods on display
       for (let k = 0; k < w / 22; k++) {
         g.fillStyle = ['#c22', '#2a6', '#24a', '#eee', '#a63', '#dd3'][Math.floor(r() * 6)];
@@ -401,7 +409,7 @@ export function shopTex(name: string, seed: number): [THREE.Texture, THREE.Textu
     g.fillRect(doorX + 44, 160, 5, 5);
     g.fillStyle = 'rgba(0,0,0,.4)';
     g.fillRect(0, 236, W, 20);
-    return [tex(c), tex(e)] as [THREE.Texture, THREE.Texture];
+    return tex(c);
   });
 }
 

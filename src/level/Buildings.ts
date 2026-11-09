@@ -114,9 +114,10 @@ export function tenement(s0: number, width: number, side: 1 | -1, height: number
 
   // ground floor shopfront
   const name = forcedName ?? SHOP_NAMES[shopIdx++ % SHOP_NAMES.length];
-  const [smap, semit] = shopTex(name, seed);
+  // no glow map: the shop windows are interior-mapped rooms now, and they light themselves
+  const smap = shopTex(name, seed);
   const shopW = Math.min(width - 0.8, 12);
-  const shopMat = new THREE.MeshStandardMaterial({ map: smap, emissiveMap: semit, emissive: 0xffffff, emissiveIntensity: 0.6, roughness: 0.6 });
+  const shopMat = new THREE.MeshStandardMaterial({ map: smap, roughness: 0.6 });
   const shopFrame = color(0x222222, 0.6);
   const shopMats = side > 0 ? [shopMat, shopFrame, shopFrame, shopFrame, shopFrame, shopFrame] : [shopFrame, shopMat, shopFrame, shopFrame, shopFrame, shopFrame];
   const shop = new THREE.Mesh(new THREE.BoxGeometry(0.3, 3.6, shopW), shopMats);
