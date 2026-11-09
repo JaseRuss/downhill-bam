@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { baseH, toWorld, S_MIN, S_MAX, COURSE } from './Road';
 import { rng, facadeTex } from '../art/Textures';
+import { QUALITY } from '../core/Platform';
 
 /**
  * Everything beyond the street: an overcast sky with drifting cloud, the Old Town's rooftops and
@@ -144,7 +145,7 @@ export class Backdrop {
       }
       return null;
     };
-    const target = COURSE === 'royalmile' ? 1500 : 2600;
+    const target = Math.round((COURSE === 'royalmile' ? 1500 : 2600) * QUALITY.city);
     const items: { p: THREE.Vector3; w: number; d: number; h: number; yaw: number; c: THREE.Color }[] = [];
     const stoneCols = [0x6f665b, 0x7d7366, 0x5f5a54, 0x8a7f70, 0x544f4a];
     for (let i = 0; i < target; i++) {
@@ -173,8 +174,9 @@ export class Backdrop {
     this.scene.add(blocks, roofs);
 
     // chimney stacks dotted over the rooftops
-    const ch = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0x4e4740 }), 900);
-    for (let i = 0; i < 900; i++) {
+    const nCh = Math.round(900 * QUALITY.city);
+    const ch = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0x4e4740 }), nCh);
+    for (let i = 0; i < nCh; i++) {
       const it = items[Math.floor(r() * items.length)];
       pos.copy(it.p).add(new THREE.Vector3((r() - 0.5) * it.w * 0.7, it.h / 2 + 2.5, (r() - 0.5) * it.d * 0.7));
       m.compose(pos, q.identity(), sc.set(1.2, 3, 2.4));

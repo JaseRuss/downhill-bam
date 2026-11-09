@@ -1,3 +1,8 @@
+import { PLATFORM } from '../core/Platform';
+
+const CLICK = PLATFORM.mobile ? 'TAP' : 'CLICK';
+const START = PLATFORM.mobile ? 'TAP' : 'CLICK / SPACE';
+
 /**
  * Three-click swing, drawn as an arc that follows the giant boot:
  *  1st click starts the backswing (the boot swings up and back),
@@ -100,7 +105,7 @@ export class SwingMeter {
     this.powerPos = -1;
     this.result = null;
     this.sweetW = 0.035;
-    this.label.textContent = 'CLICK / SPACE to start your swing';
+    this.label.textContent = `${START} to start your swing`;
   }
 
   /** Returns true when the swing is complete. */
@@ -109,7 +114,7 @@ export class SwingMeter {
       case 'idle':
         if (click) {
           this.phase = 'up';
-          this.label.textContent = 'CLICK to set POWER';
+          this.label.textContent = `${CLICK} to set POWER`;
         }
         break;
       case 'up':
@@ -119,7 +124,7 @@ export class SwingMeter {
           this.power = Math.max(0.05, (this.pos - SWEET) / (1 - SWEET));
           this.powerPos = this.pos;
           this.phase = 'down';
-          this.label.textContent = 'CLICK in the GREEN as the boot comes down';
+          this.label.textContent = `${CLICK} in the GREEN as the boot comes down`;
           if (this.power > 1) this.sweetW = 0.02; // overcooked: tighter window
         }
         break;

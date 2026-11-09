@@ -21,6 +21,8 @@ import { Boot, ARC_R } from '../level/Boot';
 import { bake } from '../world/Batcher';
 import { Backdrop, HAAR } from '../world/Backdrop';
 import { initInteriors } from '../art/Interiors';
+import { MobileUI } from '../ui/MobileUI';
+import { QUALITY } from '../core/Platform';
 import { FINISH_S, START_S, toWorld, theta, edgeL, edgeR, baseH } from '../world/Road';
 import * as Road from '../world/Road';
 
@@ -50,6 +52,11 @@ export class Game {
   arrow!: THREE.Mesh;
   backdrop!: Backdrop;
   boot!: Boot;
+  mobile: MobileUI;
+  /** Current render resolution multiplier (lowered on the fly on phones if the frame rate drops). */
+  pixelRatio = QUALITY.pixelRatio;
+  private slowFor = 0;
+  private fastFor = 0;
 
   /** What the current world was built for. */
   vehicle: VehicleId = 'trolley';
@@ -84,8 +91,8 @@ export class Game {
   skipRender = false;
 
   constructor(private canvas: HTMLCanvasElement) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: QUALITY.antialias, powerPreference: 'high-performance' });
+    this.renderer.setPixelRatio(this.pixelRatio);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -93,12 +100,17 @@ export class Game {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.camera = new THREE.PerspectiveCamera(62, 1, 0.1, 2600);
     this.input = new Input(canvas);
+    this.mobile = new MobileUI(this.input);
     this.hud = new HUD(this.camera);
     this.rig = new CameraRig(this.camera);
     window.addEventListener('resize', () => this.resize());
     this.resize();
 
-    $('startBtn').addEventListener('click', () => this.play());
+    $('startBtn').addEventListener('click', () => {
+      // the tap that starts the game is also the one iOS needs before it will share the tilt sensor
+      void this.mobile.onPlay();
+      this.play();
+    });
     $('retryBtn').addEventListener('click', () => this.restart(true));
     $('tourBtn').addEventListener('click', () => this.restart(false));
     $('garageBtn').addEventListener('click', () => this.toTitle());
@@ -149,7 +161,7 @@ export class Game {
     scene.add(new THREE.HemisphereLight(0xdfe7f0, 0x4f463c, 1.5));
     const sun = new THREE.DirectionalLight(0xfff0d8, 2.3);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.mapSize.set(QUALITY.shadowMap, QUALITY.shadowMap);
     const sc = sun.shadow.camera;
     sc.left = -38; sc.right = 38; sc.top = 38; sc.bottom = -38; sc.near = 1; sc.far = 160;
     sun.shadow.bias = -0.0004;
@@ -173,6 +185,7 @@ export class Game {
     });
     G.fx = new Fx(scene);
     G.destruction = new Destruction(scene, G.physics);
+    G.destruction.maxDebris = QUALITY.maxDebris;
     G.scoring = new Scoring(this.hud);
     G.crowd = new Crowd();
     G.terrain = new Terrain(scene, G.physics);
@@ -355,6 +368,8 @@ export class Game {
     this.arrow.visible = true;
     this.boot.setAngle(BOOT_REST);
     this.bootA = BOOT_REST;
+    // however the phone's being held now is "straight ahead"
+    this.input.tilt.calibrate();
     this.commentary.say('aim', true);
   }
 
@@ -393,6 +408,7 @@ export class Game {
     G.fx.dust(this.boot.toe, 2.4, 0xdddddd, 18);
     this.rig.shake(0.8 + r.power * 0.6);
     this.hud.bam(BOOT_WORDS[Math.floor(Math.random() * BOOT_WORDS.length)]);
+    this.mobile.buzz(60 + r.power * 80);
     this.freezeT = 0.3 + r.power * 0.12;
     this.slowT = 0.5;
     this.lastBig = G.time;
@@ -476,6 +492,7 @@ export class Game {
     this.slowT = 0.6 + 0.6 * strength;
     this.hud.bam(BAM_WORDS[Math.floor(Math.random() * BAM_WORDS.length)]);
     this.sfx.bam();
+    this.mobile.buzz(40 + strength * 60);
     this.rig.shake(0.5 * strength);
   }
 
@@ -525,7 +542,7 @@ export class Game {
   /** Hide props, tourists and pigeons lost in the haar. */
   private cull() {
     const c = this.camera.position;
-    const R2 = 165 * 165;
+    const R2 = QUALITY.cullDistance * QUALITY.cullDistance;
     const vis = (o: THREE.Object3D) => {
       const dx = o.position.x - c.x, dz = o.position.z - c.z;
       o.visible = dx * dx + dz * dz < R2;
@@ -533,6 +550,27 @@ export class Game {
     for (const p of G.destruction.parts) if (p.state !== 'gone') vis(p.mesh);
     for (const t of G.crowd.tourists) vis(t.mesh);
     for (const f of G.crowd.flocks) for (const b of f.birds) vis(b.mesh);
+  }
+
+  /** Phones: drop the render resolution when the frame rate sags, raise it again when there's headroom. */
+  private adaptResolution(fps: number, dt: number) {
+    if (!QUALITY.dynamicResolution || (window as any).__paused) return;
+    if (fps < 40) {
+      this.slowFor += dt;
+      this.fastFor = 0;
+    } else if (fps > 56) {
+      this.fastFor += dt;
+      this.slowFor = 0;
+    } else this.slowFor = this.fastFor = 0;
+    let pr = this.pixelRatio;
+    if (this.slowFor > 1.5) pr = Math.max(0.55, pr - 0.15);
+    else if (this.fastFor > 5) pr = Math.min(QUALITY.pixelRatio, pr + 0.1);
+    if (pr !== this.pixelRatio) {
+      this.pixelRatio = pr;
+      this.renderer.setPixelRatio(pr);
+      this.resize();
+      this.slowFor = this.fastFor = 0;
+    }
   }
 
   private toScreen(p: THREE.Vector3) {
@@ -546,6 +584,8 @@ export class Game {
     const dt = Math.min(0.05, dtReal);
     this.stateT += dt;
     const input = this.input;
+    input.update(dt);
+    this.mobile.setPlaying(this.state === 'aim' || this.state === 'run');
     const t = G.trolley;
 
     // time scale for freeze-frames and slow-mo
@@ -581,6 +621,7 @@ export class Game {
         if (wasIdle && this.swing.phase === 'up') {
           // swing the camera 90° round to watch the boot from the side
           this.sideView = true;
+          this.input.tilt.calibrate();
           this.arrow.visible = false;
           $('aimhint').style.display = 'none';
           this.rig.frameTo(this.sideFrame(), 0.55, { from: CameraRig.behind(p, this.launchDir()) });
@@ -704,6 +745,7 @@ export class Game {
     this.frames++;
     this.fpsT += dtReal;
     if (this.fpsT > 0.5) {
+      this.adaptResolution(this.frames / this.fpsT, this.fpsT);
       this.hud.fps.textContent = `${Math.round(this.frames / this.fpsT)} fps · ${this.renderer.info.render.calls} draws · ${G.destruction.debris.length} debris`;
       this.frames = 0;
       this.fpsT = 0;

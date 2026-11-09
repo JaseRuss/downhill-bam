@@ -92,6 +92,60 @@
     #derby { top: 108px; left: 50%; transform: translateX(-50%); display: none; font-family: 'Bangers', cursive; font-size: 30px; letter-spacing: 1px; padding: 6px 20px; border-radius: 12px; border: 3px solid #fff; background: linear-gradient(90deg, #7a1f3d 0 50%, #0b6b3a 50% 100%); white-space: nowrap; text-align: center; }
     #derby.ft { font-size: 40px; padding: 10px 26px; }
     #derby small { display: block; font-family: 'Lilita One'; font-size: 16px; letter-spacing: 2px; opacity: .9; }
+    /* ---------- the phone version ---------- */
+    #touch { inset: 0; display: none; }
+    #touch .tbtn { position: absolute; pointer-events: auto; user-select: none; -webkit-user-select: none; touch-action: none; display: flex; align-items: center; justify-content: center; font-family: 'Bangers', cursive; color: #fff; background: rgba(20,18,16,.45); border: 3px solid rgba(255,255,255,.8); border-radius: 50%; text-shadow: 0 2px 0 #000; }
+    #touch .tbtn.down { background: rgba(242,193,78,.7); }
+    #hopBtn { right: calc(22px + env(safe-area-inset-right)); bottom: 26px; width: 112px; height: 112px; font-size: 32px; }
+    #steerBtns { position: absolute; left: calc(18px + env(safe-area-inset-left)); bottom: 26px; display: flex; gap: 14px; }
+    #steerBtns .tbtn { position: static; width: 88px; height: 88px; font-size: 34px; }
+    #rotate { position: fixed; inset: 0; z-index: 20; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #1d1a17; color: #fff; font-size: 22px; text-align: center; padding: 24px; }
+    #rotate .phone { font-size: 72px; animation: tip 1.6s ease-in-out infinite; }
+    @keyframes tip { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+    @media (orientation: portrait) { body.mobile #rotate { display: flex; } }
+    #tiltInfo { display: none; font-size: 12px; background: rgba(20,18,16,.75); border-radius: 10px; padding: 6px 12px; pointer-events: auto; }
+    body.mobile #tiltInfo { display: block; }
+    #tiltInfo input { vertical-align: middle; width: 120px; }
+    body.mobile { touch-action: none; overscroll-behavior: none; }
+    body.mobile #score { font-size: 30px; top: 8px; left: calc(12px + env(safe-area-inset-left)); }
+    body.mobile #score small, body.mobile #speed small { font-size: 12px; }
+    body.mobile #combo { top: 50px; font-size: 22px; }
+    body.mobile #speed { font-size: 28px; top: 8px; right: calc(14px + env(safe-area-inset-right)); }
+    body.mobile #hops { top: 50px; font-size: 13px; right: calc(14px + env(safe-area-inset-right)); }
+    body.mobile #progress { top: 12px; width: 38vw; }
+    body.mobile #commentary { font-size: 14px; bottom: 10px; max-width: 54vw; padding: 6px 12px 8px; }
+    body.mobile #bam { font-size: 110px; }
+    body.mobile #swing { top: 64px; }
+    body.mobile #swing .label { font-size: 17px; }
+    body.mobile #aimhint { bottom: 150px; font-size: 16px; }
+    body.mobile #intro { top: 48px; padding: 8px 14px 10px; width: min(70vw, 560px); }
+    body.mobile #intro h2 { font-size: 22px; }
+    body.mobile #intro .pts { font-size: 18px; }
+    body.mobile #intro p { font-size: 13px; }
+    body.mobile #skip { font-size: 14px; bottom: 10px; }
+    body.mobile #derby { top: 52px; font-size: 20px; }
+    body.mobile #derby.ft { font-size: 26px; }
+    body.mobile #title { padding: 1vh 12px 1.5vh; }
+    body.mobile #title h1 { font-size: clamp(30px, 6.2vw, 64px); -webkit-text-stroke: 2px #000; text-shadow: 0 4px 0 #000; }
+    body.mobile #title h3 { font-size: 13px; margin: 2px 0 0; }
+    body.mobile #title .bottom { gap: 5px; }
+    body.mobile #title .keys { display: none; }
+    body.mobile #careerBar { font-size: 12px; padding: 4px 10px; }
+    body.mobile .meter { height: 6px; margin-top: 3px; }
+    body.mobile #careerBar .goal { font-size: 12px; }
+    body.mobile #garage { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; width: 100%; padding: 4px 2px 8px; touch-action: pan-x; }
+    body.mobile .car { flex: 0 0 132px; font-size: 11px; padding: 4px 7px; line-height: 1.15; border-width: 3px; }
+    body.mobile .car h4 { font-size: 13px; margin-bottom: 2px; }
+    body.mobile .car .stats { font-size: 10px; }
+    body.mobile .car .blurb { display: none; }
+    body.mobile .btn { font-size: 18px; padding: 6px 22px; margin: 2px 6px; box-shadow: 0 4px 0 #000; }
+    body.mobile #results .wrap { gap: 10px; flex-wrap: nowrap; }
+    body.mobile #results .invoice { max-height: 70vh; width: min(58vw, 520px); padding: 12px 16px; transform: none; }
+    body.mobile .invoice table { font-size: 12px; }
+    body.mobile .invoice .score .big { font-size: 28px; }
+    body.mobile #results .careerBox { width: 34vw; font-size: 14px; padding: 10px 12px; }
+    body.mobile #results .row { margin-top: 8px; }
+    body.mobile #fps { display: none; }
     #fps { bottom: 6px; left: 8px; font-size: 12px; font-family: monospace; opacity: .7; }
   </style>
 </head>

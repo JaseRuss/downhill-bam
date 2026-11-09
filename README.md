@@ -24,6 +24,17 @@ Open http://localhost:5173.
 
 Giant cans of SKOOSH (Scots for a fizzy drink: fizzy ginger, extra fizz) float over the road at the start of the long runs: on the Royal Mile after the Fringe stage (a straight shot at the World's End wall), as you enter the Grassmarket, and at the top of Leith Walk. Drive through one for 4 seconds of shove up to about 58 mph, engine or no engine.
 
+## On phones
+
+Phones and tablets get their own version automatically (`src/core/Platform.ts`): the browser's user agent says it's a phone or tablet *and* it has a touchscreen. iPads, which call themselves a Mac, are caught by the touchscreen check. Add `?mobile=1` or `?mobile=0` to the URL to force one version; the choice is remembered.
+
+- **Steer by tilting** the phone in landscape like a steering wheel. Whatever angle you're holding it at when the swing starts counts as straight ahead. There's a sensitivity slider on the title screen. iPhones ask permission for the tilt sensor when you press PLAY; if there's no sensor (or you say no), ◀ ▶ buttons appear instead.
+- **Tap** to kick (the same three-tap swing) and press the **HOP** button to hop.
+- Landscape only (portrait shows a "turn your phone sideways" screen). Android goes fullscreen and buzzes on big hits.
+- Lighter on the hardware: lower resolution (dropped further on the fly if the frame rate sags below 40 fps), smaller shadows, shorter draw distance, half the background crowds, a smaller backdrop city, and fewer pieces of debris.
+
+On every device, people standing more than a short distance away are drawn as one merged model each (about 6 pieces instead of 27), and switch back to the full jointed figure as you get close or the moment they're knocked flying.
+
 ## The launch
 
 Click to start and the camera swings round 90° to watch the Big Boot™ from the side. The swing meter is an arc that follows the boot: the marker rides up as the leg winds back (click for power), then falls with it (click in the green right where the boot meets the vehicle). Contact gives a rumble and a short freeze, then the camera follows the vehicle away and swings round behind it.

@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { RAPIER, Entity } from '../core/Physics';
 import { G } from '../ctx';
+import { QUALITY } from '../core/Platform';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { M, color } from '../art/Materials';
 import { theta, toWorld, toRoad, forward, right } from '../world/Road';
 import { buildHuman, fanOutfit, ghostOutfit, mimeOutfit, piperOutfit, poseFlail, poseSplat, poseStand, Rig, touristOutfit } from '../art/Humanoid';
@@ -22,6 +24,9 @@ class Tourist implements Entity {
   seed = Math.random() * 10;
   half: number;
   photographer = Math.random() < 0.35;
+  /** Far away and standing still: one merged mesh per material instead of ~27 jointed parts. */
+  private lod: THREE.Group | null = null;
+  private lodOff = false;
 
   constructor(s: number, u: number, public type: TouristKind, public label: string, public points: number, yOff = 0) {
     const fan = type === 'hearts' || type === 'hibs';
@@ -109,6 +114,7 @@ class Tourist implements Entity {
 
   /** Off they go, in the most undignified way physics allows. */
   knockDown(other?: Entity) {
+    this.dropLod();
     this.state = 'flying';
     this.downAt = G.time;
     this.body.setEnabledRotations(true, true, true, true);
@@ -200,6 +206,17 @@ class Tourist implements Entity {
     }
     this.mesh.rotation.set(0, this.faceYaw, 0);
     const rig = this.rig;
+    if (!this.lodOff && this.state === 'idle') {
+      const c = G.camera.position;
+      const far = (c.x - t.x) ** 2 + (c.z - t.z) ** 2 > QUALITY.lodDistance * QUALITY.lodDistance;
+      if (far && this.lod) {
+        this.lod.visible = true;
+        rig.root.visible = false;
+        return;
+      }
+      if (this.lod) this.lod.visible = false;
+      rig.root.visible = true;
+    }
     poseStand(rig, this.bob + this.seed);
     if (this.type === 'piper') {
       rig.shoulderL.rotation.set(-0.3, 0, 0.9);
@@ -235,8 +252,53 @@ class Tourist implements Entity {
     }
   }
 
+  /** Bake the figure in its current pose into a few merged meshes (one per material). */
+  private buildLod() {
+    const root = this.rig.root;
+    this.mesh.updateMatrixWorld(true);
+    const inv = this.mesh.matrixWorld.clone().invert();
+    const byMat = new Map<THREE.Material, THREE.BufferGeometry[]>();
+    root.traverse((o: any) => {
+      if (!o.isMesh || Array.isArray(o.material)) return;
+      const g = (o.geometry as THREE.BufferGeometry).clone();
+      for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+      if (!g.index) return;
+      g.applyMatrix4(inv.clone().multiply(o.matrixWorld));
+      let l = byMat.get(o.material);
+      if (!l) byMat.set(o.material, (l = []));
+      l.push(g);
+    });
+    const lod = new THREE.Group();
+    for (const [mat, geos] of byMat) {
+      const merged = mergeGeometries(geos, false);
+      geos.forEach((g) => g.dispose());
+      if (!merged) continue;
+      const m = new THREE.Mesh(merged, mat);
+      m.castShadow = true;
+      lod.add(m);
+    }
+    lod.visible = false;
+    this.mesh.add(lod);
+    this.lod = lod;
+  }
+
+  private dropLod() {
+    this.lodOff = true;
+    if (this.lod) {
+      this.mesh.remove(this.lod);
+      this.lod.traverse((o: any) => o.geometry?.dispose());
+      this.lod = null;
+    }
+    this.rig.root.visible = true;
+  }
+
   dispose() {
     G.scene.remove(this.mesh);
+  }
+
+  /** Called after the first frame's pose is applied. */
+  ensureLod() {
+    if (!this.lod && !this.lodOff && this.state === 'idle') this.buildLod();
   }
 }
 
@@ -333,10 +395,12 @@ export class Crowd {
 
   /** A loose group of tourists, often gathered round something. */
   group(s: number, u: number, n: number, spread = 1.6) {
+    n = Math.max(QUALITY.crowd < 1 && Math.random() > QUALITY.crowd ? 0 : 1, Math.round(n * QUALITY.crowd));
     for (let i = 0; i < n; i++) this.tourist(s + (Math.random() - 0.5) * spread * 2, u + (Math.random() - 0.5) * spread);
   }
 
   pigeons(s: number, u: number, n = 7, gulls = false) {
+    n = Math.max(2, Math.round(n * QUALITY.crowd));
     this.flocks.push(new Flock(s, u, n, gulls));
   }
 
@@ -350,7 +414,10 @@ export class Crowd {
   }
 
   sync(dt: number) {
-    for (const t of this.tourists) t.sync(dt);
+    for (const t of this.tourists) {
+      t.sync(dt);
+      t.ensureLod();
+    }
   }
 
   dispose() {
