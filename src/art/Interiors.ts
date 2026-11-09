@@ -256,8 +256,6 @@ const frag = /* glsl */ `
     vec3 d = vec3(dot(V, T), V.y, dot(V, N));
     float tile = floor(vUv.x / W);
     vec3 p = vec3(vUv.x - tile * W - W * 0.5, vUv.y + ${SILL.toFixed(2)}, 0.0);
-    // some rooms are mirrored, so neighbours don't match
-    if (hash(tile + 3.0) > 0.5) { p.x = -p.x; d.x = -d.x; }
     vec3 inv = 1.0 / d;
     float tx = ((d.x > 0.0 ? W * 0.5 : -W * 0.5) - p.x) * inv.x;
     float ty = ((d.y > 0.0 ? H : 0.0) - p.y) * inv.y;

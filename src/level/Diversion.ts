@@ -17,6 +17,7 @@ import type { Part } from '../destruction/Destruction';
 import { TOUR as RM_TOUR, TourInfo, Level, tourStops } from './RoyalMile';
 import { princesGardens, inGardens, GARDEN_START } from './Gardens';
 import { skooshCan } from '../props/Pickups';
+import { shopWindow } from '../art/Interiors';
 
 /**
  * The long course: the Royal Mile is shut, so it's down George IV Bridge and Victoria Street to the
@@ -268,8 +269,15 @@ function victoriaStreet() {
     sign.position.set(-2.22, 3.8, 0);
     sign.rotation.y = -Math.PI / 2;
     g.add(sign);
-    const win = bx(0.08, 2.0, 4.6, color(0x2a3540, 0.15, 0.5), -2.2, 1.6, 0);
+    // a room behind the glass, same interior mapping as every other shopfront
+    const win = shopWindow(4.6, 2.0);
+    win.position.set(-2.215, 0.6, 0);
+    win.rotation.y = -Math.PI / 2; // facing the street (local -x on this side)
     g.add(win);
+    // window frame
+    g.add(bx(0.06, 2.1, 0.08, color(0x1c1c1c, 0.6), -2.21, 1.6, -2.34));
+    g.add(bx(0.06, 2.1, 0.08, color(0x1c1c1c, 0.6), -2.21, 1.6, 2.34));
+    g.add(bx(0.06, 0.08, 4.76, color(0x1c1c1c, 0.6), -2.21, 0.58, 0));
     // the terrace deck and railings
     g.add(bx(4.6, 0.3, 6.3, M.stone(36, 58, 3), 0, 4.95, 0));
     for (let z = -3; z < 3; z += 0.5) g.add(bx(0.04, 0.95, 0.04, M.black(), -2.25, 5.55, z));
