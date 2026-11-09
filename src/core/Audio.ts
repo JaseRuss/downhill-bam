@@ -292,6 +292,14 @@ export class Sfx {
     this.tone('sine', 180, 40, 0.5, 0.3);
   }
 
+  /** Can cracked open, a big fizz, and a rising whoosh of sugar. */
+  fizz() {
+    this.burst(0.06, 'bandpass', 3200, 3, 0.5, 0.001);
+    this.burst(1.3, 'highpass', 4000, 0.7, 0.35, 0.01, 7000, 0.05);
+    this.tone('sawtooth', 180, 720, 0.9, 0.12, 0.1);
+    this.tone('square', 360, 1440, 0.7, 0.05, 0.15);
+  }
+
   /** Deep thud and rumble for the boot connecting. */
   rumble(power = 1) {
     this.tone('sine', 90, 28, 0.9, 0.55 * power);

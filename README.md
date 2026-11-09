@@ -20,6 +20,10 @@ Open http://localhost:5173.
 | Space / W / ▲ | Hop during the run (one hop; it comes back 5 seconds after you use it). The hop shoves you forward too, hardest when you're stuck, so it gets you out of craters |
 | R | Restart |
 
+## IRN BREW
+
+Giant cans of IRN BREW float over the road at the start of the long runs: on the Royal Mile after the Fringe stage (a straight shot at the World's End wall), as you enter the Grassmarket, and at the top of Leith Walk. Drive through one for 4 seconds of shove up to about 58 mph, engine or no engine.
+
 ## The launch
 
 Click to start and the camera swings round 90° to watch the Big Boot™ from the side. The swing meter is an arc that follows the boot: the marker rides up as the leg winds back (click for power), then falls with it (click in the green right where the boot meets the vehicle). Contact gives a rumble and a short freeze, then the camera follows the vehicle away and swings round behind it.

@@ -72,6 +72,7 @@ const COSTS: Record<string, [number, string]> = {
   'Hearts Fan': [0, 'Hearts fan (claims it was a dive)'],
   'Hibs Fan': [0, 'Hibs fan (wants it checked by VAR)'],
   'DERBY DAY!': [9500, 'Police overtime, Edinburgh derby'],
+  'IRN BREW!': [1, 'One can of IRN BREW (no deposit returned)'],
 };
 
 export class Scoring {

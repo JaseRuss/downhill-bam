@@ -3,6 +3,7 @@ import { buildStreet, bayFacades, guideWalls, Reserved } from './Buildings';
 import * as SP from './SetPieces';
 import { scaffold } from '../props/Props';
 import { toWorld } from '../world/Road';
+import { brewCan } from '../props/Pickups';
 
 export interface TourInfo {
   name: string;
@@ -68,6 +69,8 @@ export function buildRoyalMile(): Level {
   SP.worldsEnd(425);
   SP.tolbooth(488);
   SP.holyrood();
+  // a can of IRN BREW for the long run down from the Tron to the World's End
+  brewCan(318, 0);
 
   // extra scaffolding on a couple of ordinary lands
   scaffold(116, 124, -6.7, 6);

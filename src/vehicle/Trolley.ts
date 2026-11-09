@@ -14,6 +14,9 @@ export class Trolley implements Entity {
   spec: VehicleSpec;
   parts!: VehicleParts;
   engineOn = false;
+  /** Seconds of IRN BREW boost left. */
+  boostT = 0;
+  private fizzT = 0;
   /** Seconds until a used hop comes back (0 = not recharging). */
   hopCharge = 0;
   splashed = false;
@@ -188,6 +191,11 @@ export class Trolley implements Entity {
     return true;
   }
 
+  /** A can of IRN BREW: a few seconds of shove, engine or no engine. */
+  boost(secs: number) {
+    this.boostT = Math.max(this.boostT, secs);
+  }
+
   /** Called when the trolley breaks something: keep most of the speed so it ploughs through. */
   smashThrough(retain: number) {
     const cur = this.body.linvel();
@@ -298,6 +306,7 @@ export class Trolley implements Entity {
       this.body.addForce({ x: f.x * this.mass * push, y: 0, z: f.z * this.mass * push }, true);
     }
     this.engine(roadS, speed);
+    this.brew(h);
     this.buoyancy();
     // nearly stopped? Hamish paddles with his feet: steer keys swivel the trolley on the spot
     if (control && !this.ejected && this.launched && speed < 2.5 && steerInput !== 0) {
@@ -369,6 +378,20 @@ export class Trolley implements Entity {
     // full shove from a standstill, easing off near top speed
     const k = Math.min(1, (e.top - along) / (e.top * 0.35));
     const a = e.accel * k + (along < 2 ? 1.5 : 0);
+    this.body.addForce({ x: f.x * this.mass * a, y: 0, z: f.z * this.mass * a }, true);
+  }
+
+  /** The boost: a hard push the way it's facing, up to a (silly) top speed. */
+  private brew(h: number) {
+    if (this.boostT <= 0) return;
+    this.boostT = Math.max(0, this.boostT - h);
+    if (this.ejected || this.splashed || !this.grounded || this.upDir.y < 0.5) return;
+    const f = this.forwardDir.setY(0);
+    if (f.lengthSq() < 0.01) return;
+    f.normalize();
+    const along = this.prevVel.dot(f);
+    if (along > 26) return; // about 58 mph
+    const a = 8.5 * Math.min(1, this.boostT / 0.6 + 0.2);
     this.body.addForce({ x: f.x * this.mass * a, y: 0, z: f.z * this.mass * a }, true);
   }
 
@@ -486,6 +509,15 @@ export class Trolley implements Entity {
     if (this.parts.spinner && this.engineOn) {
       this.spinA += dt * (this.ejected ? 8 : 40);
       this.parts.spinner.rotation.x = this.spinA;
+    }
+    // orange fizz streaming off the back while boosting
+    if (this.boostT > 0 && !this.ejected) {
+      this.fizzT -= dt;
+      if (this.fizzT <= 0) {
+        this.fizzT = 0.05;
+        const back = this.forwardDir.multiplyScalar(-0.8).add(this.position).add(new THREE.Vector3(0, 0.5, 0));
+        G.fx.dust(back, 0.35, Math.random() < 0.5 ? 0xf26a1b : 0x1d4fa3, 2);
+      }
     }
     if (this.parts.exhaust && this.engineOn && !this.ejected && this.launched) {
       this.smokeT -= dt;
