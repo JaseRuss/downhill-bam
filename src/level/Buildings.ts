@@ -4,7 +4,7 @@ import { G } from '../ctx';
 import { addStatic } from '../world/Batcher';
 import { M, color } from '../art/Materials';
 import { facadeTex, shopTex, signTex, SHOP_NAMES, rng } from '../art/Textures';
-import { HALF_STREET, BAYS, BAY_T, baseH, theta, toWorld, L, roadGroup, right, edgeL, edgeR, forward } from '../world/Road';
+import { HALF_STREET, BAYS, BAY_T, baseH, theta, toWorld, toRoad, L, roadGroup, right, edgeL, edgeR, forward } from '../world/Road';
 
 export interface Reserved {
   side: 1 | -1;
@@ -241,7 +241,8 @@ export function sideStreet(s: number, side: 1 | -1, name: string, angle = 90, wi
   const yaw = Math.atan2(dir.x, dir.z);
   const road = new THREE.Mesh(new THREE.BoxGeometry(width, 0.4, len), M.stone(30, 34, 9, width / 4, len / 4));
   road.position.copy(mouth).addScaledVector(dir, len / 2);
-  road.position.y = y - 0.12;
+  // kept below the street surface, so where an angled stub tucks under the main road it can't show
+  road.position.y = y - 0.32;
   road.rotation.y = yaw;
   road.receiveShadow = true;
   addStatic(road);
@@ -261,9 +262,16 @@ export function sideStreet(s: number, side: 1 | -1, name: string, angle = 90, wi
       em.needsUpdate = true;
       const fm = new THREE.MeshStandardMaterial({ map, emissiveMap: em, emissive: 0xffffff, emissiveIntensity: 0.85, roughness: 0.9 });
       const plain = M.stone(30, 40, 3);
-      const m = new THREE.Mesh(new THREE.BoxGeometry(9, h, w), k > 0 ? [plain, fm, M.slate(), plain, plain, plain] : [fm, plain, M.slate(), plain, plain, plain]);
       const lateral = new THREE.Vector3(dir.z, 0, -dir.x).multiplyScalar(k * (width / 2 + 4.5));
-      m.position.copy(mouth).addScaledVector(dir, d + w / 2 + 1.5).add(lateral);
+      const centre = mouth.clone().addScaledVector(dir, d + w / 2 + 1.5).add(lateral);
+      // on a stub that leaves at a shallow angle, the near row would swing back over the main
+      // street: leave out any land whose footprint reaches into it
+      if (intrudes(centre, dir, 4.5, w / 2)) {
+        d += w;
+        continue;
+      }
+      const m = new THREE.Mesh(new THREE.BoxGeometry(9, h, w), k > 0 ? [plain, fm, M.slate(), plain, plain, plain] : [fm, plain, M.slate(), plain, plain, plain]);
+      m.position.copy(centre);
       m.position.y = y - 0.6 + h / 2;
       m.rotation.y = yaw;
       m.castShadow = true;
@@ -278,6 +286,20 @@ export function sideStreet(s: number, side: 1 | -1, name: string, angle = 90, wi
   sg.rotation.y = Math.atan2(-out.x, -out.z) + Math.PI;
   addStatic(sg);
   return { mouth, dir, out, width };
+}
+
+/** Does a box footprint (centre, long axis `along`, half sizes) reach into the street? */
+function intrudes(centre: THREE.Vector3, along: THREE.Vector3, halfAcross: number, halfAlong: number) {
+  const across = new THREE.Vector3(along.z, 0, -along.x);
+  for (const a of [-1, 0, 1]) {
+    for (const b of [-1, 0, 1]) {
+      const p = centre.clone().addScaledVector(across, a * halfAcross).addScaledVector(along, b * halfAlong);
+      const r = toRoad(p.x, p.z);
+      const e = r.u >= 0 ? edgeR(r.s) : edgeL(r.s);
+      if (Math.abs(r.u) < e + 0.3) return true;
+    }
+  }
+  return false;
 }
 
 /** A facade running at an angle between two road points (the splayed entry/exit of a bay). */
