@@ -196,6 +196,8 @@ export class Game {
     this.sideView = false;
     this.stopT = this.runT = this.finishT = this.splashT = 0;
     this.splashAt = null;
+    this.rig.orbitR = 7;
+    this.rig.orbitH = 3.5;
     this.freezeT = this.slowT = 0;
     this.lastBig = -10;
     this.hud.setScore(0);
@@ -480,6 +482,8 @@ export class Game {
     p.y = Road.SEA_Y + 0.2;
     this.splashAt = p.clone();
     this.rig.mode = 'orbit';
+    this.rig.orbitR = 16;
+    this.rig.orbitH = 6;
     G.fx.splash(p, 0xd8eef5, 70);
     G.fx.splash(p.clone().add(new THREE.Vector3(0, 0.5, 0)), 0xffffff, 40);
     this.sfx.splash();

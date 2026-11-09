@@ -34,6 +34,8 @@ export class CameraRig {
   private moveDur = 1;
   private dwell = 0;
   private orbitA = 0;
+  orbitR = 7;
+  orbitH = 3.5;
   private fA: Frame | null = null;
   private fB: Frame | null = null;
   private fT = 1;
@@ -159,7 +161,7 @@ export class CameraRig {
       fov += Math.min(16, sp * 0.6);
     } else if (this.mode === 'orbit') {
       this.orbitA += dt * 0.25;
-      const want = target.clone().add(new THREE.Vector3(Math.sin(this.orbitA) * 7, 3.5, Math.cos(this.orbitA) * 7));
+      const want = target.clone().add(new THREE.Vector3(Math.sin(this.orbitA) * this.orbitR, this.orbitH, Math.cos(this.orbitA) * this.orbitR));
       this.pos.lerp(want, 1 - Math.exp(-dt * 2));
       this.look.lerp(target, 1 - Math.exp(-dt * 4));
     }
