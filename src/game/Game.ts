@@ -69,6 +69,8 @@ export class Game {
   timeScale = 1;
   launchPower = 0;
   private bootT = 0;
+  /** Where the vehicle went into the Forth (the camera circles here, above the water). */
+  private splashAt: THREE.Vector3 | null = null;
   private bootA = BOOT_REST;
   /** Real-time countdown until the camera swings round behind after the boot hits. */
   private swingBackT = 0;
@@ -193,6 +195,7 @@ export class Game {
     this.recorded = false;
     this.sideView = false;
     this.stopT = this.runT = this.finishT = this.splashT = 0;
+    this.splashAt = null;
     this.freezeT = this.slowT = 0;
     this.lastBig = -10;
     this.hud.setScore(0);
@@ -475,6 +478,8 @@ export class Game {
     this.splashT = 0;
     const p = t.position;
     p.y = Road.SEA_Y + 0.2;
+    this.splashAt = p.clone();
+    this.rig.mode = 'orbit';
     G.fx.splash(p, 0xd8eef5, 70);
     G.fx.splash(p.clone().add(new THREE.Vector3(0, 0.5, 0)), 0xffffff, 40);
     this.sfx.splash();
@@ -666,7 +671,8 @@ export class Game {
       this.sfx.engineHum(this.state === 'run' && t.engineOn && !t.ejected && !t.splashed, t.speed, e?.sound ?? 1);
     } else this.sfx.rolling(0, false);
 
-    this.rig.update(dt, tp, tv, t.forwardDir);
+    if (this.splashAt && (this.state === 'run' || this.state === 'ending')) this.rig.update(dt, this.splashAt, new THREE.Vector3(), t.forwardDir);
+    else this.rig.update(dt, tp, tv, t.forwardDir);
     if (this.state === 'aim' && this.sideView) {
       const hip = this.toScreen(this.boot.hip);
       this.swing.draw((pos) => this.toScreen(this.boot.pointAt(angleOf(pos), ARC_R)), hip);

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { H, toRoad, toWorld, forward, edgeL, edgeR } from '../world/Road';
+import * as Road from '../world/Road';
 
 export interface TourStop {
   cam: THREE.Vector3;
@@ -163,6 +164,8 @@ export class CameraRig {
       this.look.lerp(target, 1 - Math.exp(-dt * 4));
     }
     // 'manual': whoever set pos/look is in charge
+    // never dip under the Firth of Forth
+    if (Road.SEA_Y > -500) this.pos.y = Math.max(this.pos.y, Road.SEA_Y + 1.5);
     cam.position.copy(this.pos);
     if (this.shakeAmt > 0.001) {
       const a = this.shakeAmt * 0.25;
