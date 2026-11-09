@@ -47,7 +47,7 @@ Castle Esplanade launch · whisky barrel pyramid · the piper & tartan shop · S
 
 ### Stages 2–4 — the long way round (`src/level/Diversion.ts`)
 
-George IV Bridge diversion (signs, an occupied portaloo) · Victoria Street's painted shops, Victoria Terrace and the broom shop (BROOM BROOM) · Grassmarket beer garden (ROUND'S ON YOU), the Covenanters' Memorial and the ENGINES ON gantry · King's Stables Road under the castle crags, parked cars and a traffic warden · the Caledonian Hotel · Princes Street: gardens, the Scott Monument, the Christmas market, a big wheel that rolls away when you knock its legs out, and a tram coming the other way · the Balmoral clock · the "Walnut Whip" · Leith Walk tram works (diggers, skips, closures to slalom) · Queen Victoria at the Foot of the Walk (WE ARE NOT AMUSED) · Newhaven lighthouse · the Starbank sea wall and slipway, and SPLASHDOWN in the Forth.
+George IV Bridge diversion (signs, an occupied portaloo) · Victoria Street's painted shops, Victoria Terrace and the broom shop (BROOM BROOM) · Grassmarket beer garden (ROUND'S ON YOU), the Covenanters' Memorial and the ENGINES ON gantry · King's Stables Road under the castle crags, parked cars and a traffic warden · the Caledonian Hotel · Princes Street: the sunken gardens (lawns, railway and a parked train, the Mound with its two galleries, the Ross Fountain, the floral clock, Waverley's glass roof, castle rock rising to the Old Town), the Scott Monument, the Christmas market, a big wheel that rolls away when you knock its legs out, and a tram coming the other way · the Balmoral clock · the "Walnut Whip" · Leith Walk tram works (diggers, skips, closures to slalom) · Queen Victoria at the Foot of the Walk (WE ARE NOT AMUSED) · Newhaven lighthouse · the Starbank sea wall and slipway, and SPLASHDOWN in the Forth.
 
 ## Code map
 
@@ -55,7 +55,7 @@ George IV Bridge diversion (signs, an occupied portaloo) · Victoria Street's pa
 - `src/vehicle/` — the five vehicles (`Vehicles.ts`), the Rapier ray-cast vehicle that drives them (`Trolley.ts`) and Hamish's ragdoll
 - `src/destruction/` — breakable parts: fixed-until-hit, collapse cascades, fracturing into chunks, debris cap
 - `src/world/` — street geometry (`Road.ts`: both courses, laid out as a path you can bend), craterable terrain, static scenery batching, sky and backdrop
-- `src/level/` — tenement generator, Edinburgh set pieces, the Big Boot launcher, the Royal Mile and long-course layouts with their tours
+- `src/level/` — tenement generator, Edinburgh set pieces, Princes Street Gardens (`Gardens.ts`), the Big Boot launcher, the Royal Mile and long-course layouts with their tours
 - `src/props/` — bins, bollards, barrels, scaffolding, tourists, pigeons
 - `src/art/` — procedural canvas textures (sandstone, cobbles, tartan, shop signs…)
 

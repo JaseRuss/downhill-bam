@@ -15,6 +15,7 @@ import { bx, cyl, cone, once, crenellate, stall, staticRamp } from './SetPieces'
 import { barrier, bench, bollard, communalBin, lampPost, aBoard, cone as coneProp, scaffold, yawQ } from '../props/Props';
 import type { Part } from '../destruction/Destruction';
 import { TOUR as RM_TOUR, TourInfo, Level, tourStops } from './RoyalMile';
+import { princesGardens, inGardens, GARDEN_START } from './Gardens';
 
 /**
  * The long course: the Royal Mile is shut, so it's down George IV Bridge and Victoria Street to the
@@ -474,46 +475,6 @@ function caledonian() {
 // =====================================================================
 // 6. Princes Street: gardens, tram, Christmas market, big wheel, Scott Monument
 // =====================================================================
-function princesGardens() {
-  const sA = MARKS.princes + 2, sB = Math.min(MARKS.eastend - 2, LIMIT - 2);
-  // railings along the gardens side
-  for (let s = sA; s < sB; s += 4) {
-    const g = roadGroup(s + 2, edgeR(s + 2) + 0.15, 0);
-    for (let z = -2; z < 2; z += 0.25) g.add(bx(0.03, 1.4, 0.03, M.black(), 0, 0.7, z));
-    g.add(bx(0.05, 0.05, 4.05, M.black(), 0, 1.35, 0));
-    g.add(bx(0.4, 0.4, 4.05, M.stone(30, 40, 6), 0, 0.1, 0));
-    add(g);
-  }
-  // the gardens drop away below street level
-  for (let s = sA; s < sB; s += 30) {
-    const len = Math.min(30, sB - s);
-    const g = roadGroup(s + len / 2, 40, 0);
-    g.position.y = baseH(s) - 7;
-    g.add(bx(58, 0.5, len + 0.5, color(0x55803f, 0.95), 0, 0, 0));
-    add(g);
-    const bank = roadGroup(s + len / 2, edgeR(s) + 3, 0);
-    bank.position.y = baseH(s) - 3.6;
-    const slope = bx(7.6, 0.5, len + 0.5, color(0x4c7a38, 0.95), 0, 0, 0);
-    slope.rotation.z = 0.88;
-    bank.add(slope);
-    add(bank);
-  }
-  const r = rng(31);
-  for (let i = 0; i < 40; i++) {
-    const s = sA + r() * (sB - sA);
-    const u = 17 + r() * 42;
-    const p = toWorld(s, u, 0);
-    p.y = baseH(s) - 7;
-    const t = new THREE.Group();
-    t.add(cyl(0.3, 0.4, 4, M.wood(24, 24, 2), 0, 2, 0, 6));
-    const crown = new THREE.Mesh(new THREE.DodecahedronGeometry(2.6 + r() * 1.4, 0), color(0x3f6b33, 0.95));
-    crown.position.y = 5.5;
-    t.add(crown);
-    t.position.copy(p);
-    add(t);
-  }
-}
-
 function scottMonument(s: number, u: number) {
   if (!on(s - 40)) return;
   const black = M.stone(28, 22, 61, 2, 4);
@@ -1101,7 +1062,7 @@ export function buildDiversion(tier: number): Level {
     // right-hand side
     R(1, m.victoria + 19, m.victoria + 33), // broom shop
     R(1, m.westport + 3, m.lothian + 4), // castle cliff
-    R(1, m.princes + 1, m.eastend), // gardens
+    R(1, m.princes + GARDEN_START - 1, m.eastend), // gardens (buildings on the Lothian Road corner before them)
     R(1, m.eastend, m.eastend + 22), // the Balmoral
     R(1, m.leithst + 12, m.leithst + 48), // walnut whip
     R(1, m.leithwalk + 85, m.leithwalk + 95),
@@ -1141,7 +1102,7 @@ export function buildDiversion(tier: number): Level {
   if (tier >= 3) {
     kingsStables();
     caledonian();
-    princesGardens();
+    princesGardens(LIMIT);
     scottMonument(m.princes + 210, 30);
     christmasMarket();
     tram();
@@ -1183,7 +1144,7 @@ export function buildDiversion(tier: number): Level {
     if (isSea(x, z)) return true;
     const r = toRoad(x, z);
     // Princes Street Gardens and the castle crags stay green/rocky
-    if (tier >= 3 && r.s > m.princes - 4 && r.s < m.eastend + 2 && r.u > 0 && r.u < 66) return true;
+    if (tier >= 3 && inGardens(x, z)) return true;
     if (r.s > m.westport && r.s < m.lothian && r.u > 0 && r.u < 40) return true;
     return false;
   };
