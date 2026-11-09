@@ -111,8 +111,8 @@ function rmCx(s: number) {
  * are squashed so the run stays a few minutes long.
  */
 const DIVERSION: [number, number, number, string?][] = [
-  [38, -98, 0.04, 'junction'], // right off the Royal Mile onto George IV Bridge
-  [22, 0, 0.02, 'givb'],
+  [68, -98, 0.04, 'junction'], // right off the Royal Mile onto George IV Bridge (a ~40 m radius, so it's makeable at speed)
+  [14, 0, 0.02, 'givb'],
   [70, -73, 0.1, 'victoria'], // Victoria Street, steep and curving
   [14, -20, 0.05, 'westbow'],
   [95, 0, 0.004, 'grassmarket'],
@@ -186,6 +186,8 @@ export function setCourse(course: CourseId, tier: number) {
     S_MAX = tier >= 4 ? MARKS.end + 0.5 : FINISH_S + 40;
     WALL_S1 = S_MAX - (tier >= 4 ? 14 : 0);
     ZONES = [
+      // extra room through the turn off the Royal Mile and along George IV Bridge
+      { s0: JOIN_S - 6, s1: MARKS.victoria + 2, l: 9.8, r: 9.4 },
       { s0: MARKS.grassmarket - 4, s1: MARKS.westport + 4, l: 10.6, r: 11.2 },
       { s0: MARKS.princes + 4, s1: MARKS.eastend, l: 9.2, r: 11.0 },
       { s0: MARKS.leithwalk + 6, s1: MARKS.foot - 4, l: 9.0, r: 9.0 },

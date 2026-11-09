@@ -219,7 +219,7 @@ export class Backdrop {
     // Calton Hill with the Nelson Monument and the unfinished National Monument
     // (on the long course it sits beside Leith Street, smaller, so it stays off the road)
     const long = COURSE !== 'royalmile';
-    const calton = long ? new THREE.Vector3(84, 0, 224) : at(470, -330);
+    const calton = long ? new THREE.Vector3(72, 0, 242) : at(470, -330);
     const k = long ? 0.38 : 1;
     const cMat = basic(0x56603f, 0.5);
     add(new THREE.DodecahedronGeometry(1, 2), cMat, calton.x, -10 + (long ? 20 : 0), calton.z, 150 * k, 75 * (long ? 0.75 : 1), 120 * k);

@@ -211,7 +211,7 @@ function castleHill() {
 // =====================================================================
 function diversionJunction() {
   // the Royal Mile carries straight on, shut
-  blocked(JOIN_S + 8, -1, 'ROYAL MILE', forward(JOIN_S - 5), 14);
+  blocked(JOIN_S + 18, -1, 'ROYAL MILE', forward(JOIN_S - 5), 14);
   // yellow diversion signs pointing right
   const yellow = mapMat(signTex(['DIVERSION', '→ → →'], '#f2c14e', '#161616', 256, 160));
   for (const [s, u] of [[96, -5.8], [106, -6.2], [114, -5.6]] as [number, number][]) {
@@ -1085,7 +1085,7 @@ export function buildDiversion(tier: number): Level {
     R(1, 36, 56),
     R(-1, 88, 106),
     // side streets (left)
-    R(-1, JOIN_S + 7, JOIN_S + 23),
+    R(-1, JOIN_S + 17, JOIN_S + 33),
     R(-1, m.grassmarket + 7, m.grassmarket + 17),
     R(-1, m.westport + 5, m.westport + 15),
     R(-1, m.lothian + 10, m.lothian + 20),
