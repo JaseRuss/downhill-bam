@@ -54,9 +54,14 @@ export class HUD {
     setTimeout(() => (this.combo.style.transform = 'scale(1)'), 90);
   }
 
-  setRun(speedMs: number, hops: number, ejected: boolean, s: number, sMin: number, sMax: number, chasing = false) {
+  setRun(speedMs: number, hops: number, hopCharge: number, ejected: boolean, s: number, sMin: number, sMax: number, chasing = false, engine = '') {
     (this.speed.querySelector('span') as HTMLElement).textContent = Math.round(speedMs * 2.237).toString();
-    this.hops.textContent = ejected ? (chasing ? 'HAMISH IS GIVING CHASE!' : 'NO DRIVER!') : `HOPS: ${'●'.repeat(hops)}${'○'.repeat(Math.max(0, 2 - hops))}`;
+    let txt: string;
+    if (ejected) txt = chasing ? 'HAMISH IS GIVING CHASE!' : 'NO DRIVER!';
+    else if (hops > 0) txt = `HOP: ${'●'.repeat(hops)}`;
+    else if (hopCharge > 0) txt = `HOP: ○ back in ${Math.ceil(hopCharge)}s`;
+    else txt = 'HOP: ○';
+    this.hops.textContent = engine ? `${txt}  ·  ${engine}` : txt;
     const k = Math.min(1, Math.max(0, (s - sMin) / (sMax - sMin)));
     (this.progress.querySelector('.fill') as HTMLElement).style.width = `${k * 100}%`;
     for (const m of this.marks) m.el.classList.toggle('done', m.s < s);

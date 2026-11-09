@@ -182,6 +182,13 @@ export function buildStreet(reserved: Reserved[], sFrom: number, sTo: number, st
       }
       const st = style(s);
       let w = 8 + r() * 7;
+      // on a tight bend, straight-fronted lands must be narrow or their ends poke into the street
+      const k = Math.abs(theta(s + 3) - theta(s - 3)) / 6;
+      if (k > 0.004) {
+        const inner = (theta(s + 3) - theta(s - 3)) * side < 0; // bending away from this side? then it's the inside
+        const rad = 1 / k + (inner ? -edge(s) : edge(s));
+        w = Math.min(w, Math.max(4, 2 * Math.sqrt(2 * (inner ? 0.45 : 1.2) * Math.max(1, rad))));
+      }
       const next = reserved.filter((x) => x.side === side && x.s0 >= s).sort((a, b) => a.s0 - b.s0)[0];
       if (next && s + w > next.s0) w = next.s0 - s;
       if (s + w > sTo) w = sTo - s;

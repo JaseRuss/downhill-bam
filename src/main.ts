@@ -16,7 +16,8 @@ async function boot() {
   const frame = (now: number) => {
     const dt = (now - last) / 1000;
     last = now;
-    game.update(dt);
+    // the debug helpers can pause the live loop and step frames by hand
+    if (!(window as any).__paused) game.update(dt);
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);

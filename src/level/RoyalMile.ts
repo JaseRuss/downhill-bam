@@ -14,7 +14,7 @@ export interface TourInfo {
 }
 
 export const TOUR: TourInfo[] = [
-  { name: 'The Castle Esplanade', pts: 'LAUNCH PAD', blurb: 'Line up, swing the Royal Mile Trolley Launcher™, and let gravity do the rest.', s: -14, cam: [-24, 3, 5], look: [-48, 0, 9] },
+  { name: 'The Castle Esplanade', pts: 'LAUNCH PAD', blurb: 'Line up, give it the Big Boot™, and let gravity do the rest.', s: -14, cam: [-24, 3, 5], look: [-48, 0, 9] },
   { name: 'The Auld Scunner Whisky Experience', pts: '80 per barrel · 1,500 BARREL BOWLING', blurb: 'Fifteen barrels of eighteen-year-old single malt. Knock over eight for a strike.', s: 45, cam: [33, -3, 3.2], look: [45, 1, 1.4] },
   { name: 'The Piper & The Tartan Tat Emporium', pts: '900 PIPER · 150 per window', blurb: "He's been playing 'Scotland the Brave' since 6am. Plate glass and kilted mannequins.", s: 97, cam: [84, 1.5, 3], look: [97, -5, 1.8] },
   { name: "St Giles' Cathedral", pts: '5,000 CROWN JEWEL', blurb: 'Veer right into Parliament Square, knock out the scaffolding, and the 15th-century crown spire comes down. Mind yer heid.', s: 150, cam: [126, -3, 9], look: [166, 14, 20] },
@@ -29,9 +29,16 @@ export const TOUR: TourInfo[] = [
 ];
 
 export interface Level {
-  launcher: SP.Launcher;
+  /** Name for the tour card and the invoice. */
+  name: string;
   tour: TourInfo[];
   stops: { cam: THREE.Vector3; look: THREE.Vector3 }[];
+  /** World spots the backdrop city must stay clear of (gardens, the sea...). */
+  keepOut?: (x: number, z: number) => boolean;
+}
+
+export function tourStops(tour: TourInfo[]) {
+  return tour.map((t) => ({ cam: toWorld(t.cam[0], t.cam[1], t.cam[2]), look: toWorld(t.look[0], t.look[1], t.look[2]) }));
 }
 
 export function buildRoyalMile(): Level {
@@ -49,7 +56,7 @@ export function buildRoyalMile(): Level {
   bayFacades([[142, 198], [478, 498]]);
   guideWalls(-4, 570);
 
-  const launcher = SP.castleEsplanade();
+  SP.castleEsplanade();
   SP.whiskyPyramid(47, 1.0);
   SP.piperAndTartan(96);
   SP.stGiles();
@@ -71,6 +78,5 @@ export function buildRoyalMile(): Level {
     [-60, 6], [38, 56], [88, 106], [140, 200], [203, 214], [224, 232], [280, 310], [334, 368], [418, 434], [484, 506], [565, 700],
   ]);
 
-  const stops = TOUR.map((t) => ({ cam: toWorld(t.cam[0], t.cam[1], t.cam[2]), look: toWorld(t.look[0], t.look[1], t.look[2]) }));
-  return { launcher, tour: TOUR, stops };
+  return { name: 'The Royal Mile', tour: TOUR, stops: tourStops(TOUR) };
 }

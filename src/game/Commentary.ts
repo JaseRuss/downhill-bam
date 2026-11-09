@@ -44,6 +44,38 @@ const LINES: Record<string, string[]> = {
   stopped: ["And he's... stopped. Well. That's that then.", "Out of steam. Like the rest of us."],
   wreck: ["It's a write-off. The trolley, the street, everything."],
   results: ["The council will be in touch.", "Same time tomorrow?"],
+  // the Big Boot
+  boot: ["THE BOOT HAS SPOKEN!", "Right up the jacksie!", "That's a size forty-seven, that.", "Ye've been booted, son!"],
+  intro_long: [
+    "The Royal Mile's shut for roadworks. Again. Follow the diversion signs, if ye can read at that speed.",
+    "Today's route: down tae the Grassmarket, up tae Princes Street, and on tae Leith. The Forth is not a car park.",
+  ],
+  // engines and the long course
+  diversion: ["DIVERSION! Hard right down George IV Bridge!", "The Royal Mile's closed! Right turn, right now!"],
+  engine_blower: ["He's pulled the cord! Leaf blower ENGAGED!", "Listen tae that two-stroke! The neighbours will love it."],
+  engine_scooter: ["Granny's scooter is up tae... four miles an hour. No, wait, he's took the limiter off!", "Mobility scooter, full beans!"],
+  engine_buggy: ["The buggy's away! Fore!", "Electric golf buggy, unleashed on the public highway!"],
+  engine_outboard: ["He's started the outboard. On a road. In a bath.", "The bathtub's got a motor! Of course it has!"],
+  stalled: ["No engine and nae hill. That's that, then.", "He's run out o' downhill!"],
+  grassmarket: ["Into the Grassmarket! Mind the drinkers!", "The beer garden's open. Not for long."],
+  pints: ["That's a lot of spilt pints. There'll be a riot.", "Somebody's going tae want a refill."],
+  covenanters: ["Not the Covenanters' Memorial! Have ye no respect?", "Four hundred years o' history and a trolley."],
+  warden: ["He's flattened the traffic warden! The whole city cheers!", "That's the most popular thing anyone's ever done in Edinburgh."],
+  cars: ["Car alarm! Car alarm everywhere!", "Ye'll no' get a parking space like that."],
+  caley: ["Round the Caley! Mind the doorman!"],
+  tram: ["THE TRAM! He's been hit by a tram!", "Trams: late, expensive, and absolutely unstoppable.", "That tram took fifteen years tae build and two seconds tae hit ye."],
+  wheel: ["THE BIG WHEEL'S LOOSE! RUN!", "The big wheel is rolling down Princes Street! This is not a drill!", "That's the most the big wheel has moved in years!"],
+  market: ["Mulled wine everywhere! Christmas is cancelled!", "He's ploughed through the Christmas market. Bah, humbug."],
+  scott: ["There's the Scott Monument. Looks like a gothic rocket. Probably is."],
+  balmoral: ["The Balmoral clock's always three minutes fast. So's he."],
+  walnut: ["There's the Walnut Whip. Locals hate it. Tourists photograph it. Nobody eats it."],
+  tramworks: ["Tram works! They were meant tae be finished in 2014!", "Cones! Cones as far as the eye can see!"],
+  victoria: ["QUEEN VICTORIA IS NOT AMUSED!", "Her Majesty has been toppled! We are definitely not amused!"],
+  lighthouse: ["Newhaven Lighthouse! The sea's next! Somebody stop him!"],
+  splash: ["SPLASHDOWN! Into the Forth he goes!", "He's in the sea! And so is the vehicle! And the dignity!", "That's the Firth of Forth! It's freezing! Nobody tell his mother!"],
+  sinking: ["Glug glug glug.", "And down she goes. Like the Titanic, but in Leith."],
+  finish_gm: ["That's the Grassmarket! End of the line... for now.", "Road closed! That's as far as the council lets ye go."],
+  finish_ps: ["Princes Street conquered! The East End's closed beyond. Unlock more, son."],
 };
 
 export class Commentary {

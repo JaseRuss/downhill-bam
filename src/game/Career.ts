@@ -45,21 +45,21 @@ const best = (d: CareerData) => Math.max(0, ...Object.values(d.best));
 export const GOALS: Goal[] = [
   {
     id: 'grassmarket',
-    title: 'Score 12,000 in one run',
+    title: 'Score 10,000 in one run',
     reward: 'The Grassmarket Diversion + the Leaf-Blower Trolley',
     tier: 2,
     vehicle: 'blower',
-    progress: (d, r) => [Math.max(best(d), r?.score ?? 0), 12000],
-    done: (d, r) => Math.max(best(d), r?.score ?? 0) >= 12000,
+    progress: (d, r) => [Math.max(best(d), r?.score ?? 0), 10000],
+    done: (d, r) => Math.max(best(d), r?.score ?? 0) >= 10000,
   },
   {
     id: 'princes',
-    title: 'Bank 60,000 career points',
+    title: 'Bank 50,000 career points',
     reward: "Up to Princes Street + Granny McLeod's Mobility Scooter",
     tier: 3,
     vehicle: 'scooter',
-    progress: (d) => [d.bank, 60000],
-    done: (d) => d.bank >= 60000,
+    progress: (d) => [d.bank, 50000],
+    done: (d) => d.bank >= 50000,
   },
   {
     id: 'leith',

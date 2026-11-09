@@ -1,5 +1,7 @@
 import { G } from './ctx';
 import * as Road from './world/Road';
+import { GOALS } from './game/Career';
+import { VEHICLE_ORDER } from './vehicle/Vehicles';
 
 /**
  * Test helpers for driving the game from the console (enabled with ?debug in the URL).
@@ -7,8 +9,14 @@ import * as Road from './world/Road';
  */
 export function installDebug(game: any) {
   const w = window as any;
+  /** Step n frames by hand (pauses the live loop); only the last one is drawn. */
   const F = (n = 1) => {
-    for (let i = 0; i < n; i++) game.update(1 / 60);
+    w.__paused = true;
+    for (let i = 0; i < n; i++) {
+      game.skipRender = i < n - 1;
+      game.update(1 / 60);
+    }
+    game.skipRender = false;
   };
   const key = (code: string, down: boolean) => window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code }));
   const press = (code = 'Space') => {
@@ -34,28 +42,51 @@ export function installDebug(game: any) {
     press();
     F(1);
     guard = 0;
-    while (game.swing.pos > 0.1 && guard++ < 500) F(1);
+    while (game.swing.pos > 0.095 && guard++ < 500) F(1);
     press();
     F(1);
-    guard = 0;
-    while (game.state === 'launching' && guard++ < 200) F(1);
+  };
+  /** Pretend the career has got this far (tier 1-4) and pick a vehicle, then rebuild. */
+  const setCareer = (tier = 4, vehicle = 'buggy') => {
+    const d = game.career.data;
+    d.goals = GOALS.filter((g) => !g.tier || g.tier <= tier).filter((g) => (g.tier ?? 9) <= tier).map((g) => g.id);
+    d.vehicles = VEHICLE_ORDER.slice();
+    d.vehicle = vehicle;
+    game.career.save();
+    game.toTitle();
+    return `tier ${game.career.tier}, built tier ${game.tier}, ${game.vehicle}, S_MAX ${Road.S_MAX.toFixed(0)}`;
   };
   // a route that visits every set piece
   const plan: [number, number][] = [[-20, 0], [30, 1.0], [60, 0], [80, -2], [100, -1], [136, 5], [148, 9.3], [162, 6.5], [200, 7.4], [215, 0], [222, -2], [232, 0], [270, -3.5], [300, -4.2], [320, 0], [336, 5], [350, 9.0], [370, 0], [440, 0], [470, 8.0], [484, 8.0], [500, 0], [600, 0], [700, 0]];
+  // the long course: middle of the road, left of the tram, slaloming the Leith Walk closures
+  const longU = (s: number) => {
+    const M = Road.MARKS;
+    if (s < Road.JOIN_S) return s > 30 && s < 60 ? 1.0 : 0;
+    const a = M.leithwalk + 22;
+    if (s > a - 14 && s < M.foot - 10) {
+      const i = Math.floor((s - (a - 14)) / 44);
+      const side = i % 2 ? 1 : -1;
+      return -side * 2.6;
+    }
+    if (s > M.ksr && s < M.lothian) return 1.6; // the parked cars are on the left
+    if (s > M.princes && s < M.eastend) return -1.2; // the tram's on the right
+    return 0;
+  };
   const targetU = (s: number) => {
+    if (Road.COURSE !== 'royalmile') return longU(s);
     for (let i = 0; i < plan.length - 1; i++) {
       const [s0, u0] = plan[i], [s1, u1] = plan[i + 1];
       if (s >= s0 && s < s1) return u0 + ((u1 - u0) * (s - s0)) / (s1 - s0);
     }
     return 0;
   };
-  const autopilot = (secs = 90, hopAt: [number, string][] = [], power = 0.97, stopAt = Infinity) => {
-    launchOnly(power);
+  let held: string | null = null;
+  /** Steer along the planned line for n frames (no relaunch). Returns a log. */
+  const drive = (frames: number, hopAt: [number, string][] = []) => {
     const out: string[] = [];
     let last = 0;
     const hops = hopAt.slice();
-    let held: string | null = null;
-    for (let f = 0; f < secs * 60; f++) {
+    for (let f = 0; f < frames; f++) {
       const { s, u } = ru();
       const want = targetU(s + 6);
       const steer = Math.max(-1, Math.min(1, (want - u) * 0.35 - hd() * 2.2));
@@ -74,11 +105,7 @@ export function installDebug(game: any) {
       if (f - last >= 120) {
         last = f;
         const t = G.trolley;
-        out.push(`${(f / 60).toFixed(0)}s s=${s.toFixed(0)} u=${u.toFixed(1)} want=${want.toFixed(1)} sp=${t.speed.toFixed(1)} ej=${t.ejected} score=${G.scoring.score}`);
-      }
-      if (s > stopAt) {
-        out.push(`stopped at s=${s.toFixed(0)}`);
-        break;
+        out.push(`${(game.runT).toFixed(0)}s s=${s.toFixed(0)} u=${u.toFixed(1)} want=${want.toFixed(1)} sp=${t.speed.toFixed(1)} ej=${t.ejected} eng=${t.engineOn} score=${G.scoring.score}`);
       }
       if (game.state !== 'run') {
         out.push(`state ${game.state} at s=${s.toFixed(0)}`);
@@ -86,8 +113,13 @@ export function installDebug(game: any) {
       }
     }
     if (held) key(held, false);
-    out.push(JSON.stringify([...G.scoring.log.values()].map((i) => `${i.label} x${i.count}`)));
+    held = null;
     return out.join('\n');
   };
-  Object.assign(w, { F, key, press, ru, hd, launchOnly, autopilot, Road });
+  const autopilot = (secs = 90, hopAt: [number, string][] = [], power = 0.97) => {
+    launchOnly(power);
+    const log = drive(secs * 60, hopAt);
+    return log + '\n' + JSON.stringify([...G.scoring.log.values()].map((i) => `${i.label} x${i.count}`));
+  };
+  Object.assign(w, { F, key, press, ru, hd, launchOnly, drive, autopilot, setCareer, Road });
 }

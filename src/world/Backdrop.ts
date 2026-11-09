@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { baseH, toWorld } from './Road';
+import { baseH, toWorld, S_MIN, S_MAX, COURSE } from './Road';
 import { rng, facadeTex } from '../art/Textures';
 
 /**
@@ -69,7 +69,11 @@ export class Backdrop {
   private skyMat: THREE.ShaderMaterial;
   private t = 0;
 
-  constructor(private scene: THREE.Scene, sunDir: THREE.Vector3) {
+  /** World spots the city must leave alone (gardens, the sea). */
+  private keepOut: (x: number, z: number) => boolean;
+
+  constructor(private scene: THREE.Scene, sunDir: THREE.Vector3, keepOut?: (x: number, z: number) => boolean) {
+    this.keepOut = keepOut ?? (() => false);
     this.skyMat = new THREE.ShaderMaterial({
       vertexShader: skyVert,
       fragmentShader: skyFrag,
@@ -103,21 +107,51 @@ export class Backdrop {
     this.scene.add(m);
   }
 
-  /** Rooftops, chimneys and church spires either side of the Royal Mile (two instanced draw calls). */
+  /** Rooftops, chimneys and church spires all round the course, kept well clear of the route. */
   private city() {
     const r = rng(2024);
+    // the route as a polyline, for distance checks
+    const path: { x: number; z: number; s: number }[] = [];
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (let s = S_MIN; s <= S_MAX; s += 4) {
+      const p = toWorld(s, 0, 0);
+      path.push({ x: p.x, z: p.z, s });
+      x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z);
+    }
+    const M = 330;
+    x0 -= M; x1 += M; z0 -= M * 0.6; z1 += M * 0.6;
+    const nearest = (x: number, z: number) => {
+      let bd = Infinity, bs = 0;
+      for (const q of path) {
+        const d = (q.x - x) ** 2 + (q.z - z) ** 2;
+        if (d < bd) {
+          bd = d;
+          bs = q.s;
+        }
+      }
+      return { d: Math.sqrt(bd), s: bs };
+    };
+    /** A spot for a building: clear of the street, with the land falling away from it. */
+    const spot = (minD: number) => {
+      for (let tries = 0; tries < 30; tries++) {
+        const x = x0 + r() * (x1 - x0), z = z0 + r() * (z1 - z0);
+        const n = nearest(x, z);
+        if (n.d < minD || n.d > M || this.keepOut(x, z)) continue;
+        // denser near the street, thinning out further away
+        if (r() > Math.pow(1 - (n.d - minD) / M, 1.3) + 0.15) continue;
+        const ground = baseH(n.s) - 6 - Math.min(40, (n.d - 24) * 0.16);
+        return { x, z, d: n.d, ground };
+      }
+      return null;
+    };
+    const target = COURSE === 'royalmile' ? 1500 : 2600;
     const items: { p: THREE.Vector3; w: number; d: number; h: number; yaw: number; c: THREE.Color }[] = [];
     const stoneCols = [0x6f665b, 0x7d7366, 0x5f5a54, 0x8a7f70, 0x544f4a];
-    for (let i = 0; i < 1500; i++) {
-      const s = -140 + r() * 980;
-      const side = r() < 0.5 ? -1 : 1;
-      const u = side * (30 + Math.pow(r(), 1.6) * 320);
-      const p = toWorld(s, u, 0);
-      // the land drops away from the ridge the street runs along
-      const ground = baseH(s) - 6 - Math.min(40, (Math.abs(u) - 24) * 0.16);
-      const h = 10 + r() * 16 + (Math.abs(u) < 60 ? 6 : 0);
-      p.y = ground + h / 2;
-      items.push({ p, w: 8 + r() * 14, d: 8 + r() * 12, h, yaw: (r() - 0.5) * 0.5, c: new THREE.Color(stoneCols[Math.floor(r() * stoneCols.length)]) });
+    for (let i = 0; i < target; i++) {
+      const sp = spot(30);
+      if (!sp) continue;
+      const h = 10 + r() * 16 + (sp.d < 60 ? 6 : 0);
+      items.push({ p: new THREE.Vector3(sp.x, sp.ground + h / 2, sp.z), w: 8 + r() * 14, d: 8 + r() * 12, h, yaw: r() * Math.PI, c: new THREE.Color(stoneCols[Math.floor(r() * stoneCols.length)]) });
     }
     const box = new THREE.BoxGeometry(1, 1, 1);
     const [fmap, femit] = facadeTex(30, 48, 2);
@@ -153,14 +187,12 @@ export class Backdrop {
     const spires = new THREE.InstancedMesh(spireGeo, new THREE.MeshLambertMaterial({ color: 0x3b3a3a }), 26);
     const towers = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0x6a6258 }), 26);
     for (let i = 0; i < 26; i++) {
-      const s = -60 + r() * 760;
-      const u = (r() < 0.5 ? -1 : 1) * (40 + r() * 260);
-      const p = toWorld(s, u, 0);
-      const ground = baseH(s) - 6 - Math.min(40, (Math.abs(u) - 24) * 0.16);
+      const sp = spot(40);
+      if (!sp) continue;
       const th = 22 + r() * 14, sh = 14 + r() * 16;
-      m.compose(pos.set(p.x, ground + th / 2, p.z), q.identity(), sc.set(6, th, 6));
+      m.compose(pos.set(sp.x, sp.ground + th / 2, sp.z), q.identity(), sc.set(6, th, 6));
       towers.setMatrixAt(i, m);
-      m.compose(pos.set(p.x, ground + th + sh / 2, p.z), q.identity(), sc.set(3.4, sh, 3.4));
+      m.compose(pos.set(sp.x, sp.ground + th + sh / 2, sp.z), q.identity(), sc.set(3.4, sh, 3.4));
       spires.setMatrixAt(i, m);
     }
     this.scene.add(towers, spires);
@@ -176,29 +208,35 @@ export class Backdrop {
       this.scene.add(mesh);
       return mesh;
     };
+    // fixed world spots (the Royal Mile runs along +z, north is +x), whatever the course
+    const at = (s: number, u: number) => new THREE.Vector3(-u, 0, s);
     // Arthur's Seat: a crouching lion of a hill beyond Holyrood
-    const seat = toWorld(980, 260, 0);
+    const seat = at(980, 260);
     const hillMat = basic(0x4f5a3c, 0.45);
     add(new THREE.DodecahedronGeometry(1, 2), hillMat, seat.x, -20, seat.z, 260, 150, 200);
     add(new THREE.DodecahedronGeometry(1, 1), hillMat, seat.x - 60, 70, seat.z - 40, 90, 95, 80); // the summit
     add(new THREE.DodecahedronGeometry(1, 1), basic(0x6b5a4c, 0.45), seat.x - 150, 10, seat.z - 120, 140, 70, 60); // Salisbury Crags
     // Calton Hill with the Nelson Monument and the unfinished National Monument
-    const calton = toWorld(470, -330, 0);
+    // (on the long course it sits beside Leith Street, smaller, so it stays off the road)
+    const long = COURSE !== 'royalmile';
+    const calton = long ? new THREE.Vector3(84, 0, 224) : at(470, -330);
+    const k = long ? 0.38 : 1;
     const cMat = basic(0x56603f, 0.5);
-    add(new THREE.DodecahedronGeometry(1, 2), cMat, calton.x, -10, calton.z, 150, 75, 120);
+    add(new THREE.DodecahedronGeometry(1, 2), cMat, calton.x, -10 + (long ? 20 : 0), calton.z, 150 * k, 75 * (long ? 0.75 : 1), 120 * k);
     const monMat = basic(0x8b8478, 0.45);
-    add(new THREE.CylinderGeometry(4, 7, 34, 10), monMat, calton.x + 25, 75, calton.z, 1, 1, 1);
-    add(new THREE.CylinderGeometry(6, 6, 6, 10), monMat, calton.x + 25, 95, calton.z, 1, 1, 1);
-    for (let i = 0; i < 12; i++) add(new THREE.CylinderGeometry(1.4, 1.4, 16, 8), monMat, calton.x - 40 + i * 5, 70, calton.z + 20);
-    add(new THREE.BoxGeometry(62, 3, 5), monMat, calton.x - 12.5, 79.5, calton.z + 20);
+    const top = long ? 66 : 75;
+    add(new THREE.CylinderGeometry(4, 7, 34, 10), monMat, calton.x + 25 * k, top, calton.z, 1, 1, 1);
+    add(new THREE.CylinderGeometry(6, 6, 6, 10), monMat, calton.x + 25 * k, top + 20, calton.z, 1, 1, 1);
+    for (let i = 0; i < 12; i++) add(new THREE.CylinderGeometry(1.4, 1.4, 16, 8), monMat, calton.x - 40 * k + i * 5, top - 5, calton.z + 20 * k);
+    add(new THREE.BoxGeometry(62, 3, 5), monMat, calton.x - 40 * k + 27.5, top + 4.5, calton.z + 20 * k);
     // the Firth of Forth and the hills of Fife beyond (north = left of the street)
-    const forth = toWorld(300, -1000, 0);
+    const forth = at(300, -1000);
     const water = add(new THREE.PlaneGeometry(420, 2600), basic(0x8fa2ad, 0.55), forth.x, -12, forth.z);
     water.rotation.x = -Math.PI / 2;
-    const fife = toWorld(300, -1260, 0);
+    const fife = at(300, -1260);
     for (let i = 0; i < 6; i++) add(new THREE.DodecahedronGeometry(1, 1), basic(0x5b6650, 0.72), fife.x + (i - 2.5) * 30, -20, fife.z + (i - 2.5) * 380, 120, 70 + (i % 3) * 25, 260);
     // the Pentland Hills to the south (right of the street)
-    const pent = toWorld(150, 1150, 0);
+    const pent = at(150, 1150);
     for (let i = 0; i < 7; i++) add(new THREE.DodecahedronGeometry(1, 1), basic(0x55603f, 0.75), pent.x + (i - 3) * 40, -20, pent.z + (i - 3) * 260, 180, 110 + (i % 2) * 45, 200);
   }
 

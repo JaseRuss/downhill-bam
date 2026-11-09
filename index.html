@@ -37,12 +37,9 @@
     #commentary.show { opacity: 1; }
     #bam { inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'Bangers', cursive; font-size: 180px; color: #ffd23f; -webkit-text-stroke: 6px #000; opacity: 0; transform: scale(.4) rotate(-8deg); transition: none; }
     #bam.show { opacity: 1; transform: scale(1) rotate(-8deg); transition: transform .12s cubic-bezier(.3,1.8,.6,1); }
-    #swing { bottom: 110px; left: 50%; transform: translateX(-50%); width: min(80vw, 620px); display: none; text-align: center; }
-    #swing .bar { position: relative; height: 34px; border-radius: 17px; background: linear-gradient(90deg, #3a8 0%, #3a8 8%, #ddd 8%, #f0d060 70%, #f08030 90.9%, #d22 90.9%, #a00 100%); border: 3px solid #fff; overflow: visible; }
-    #swing .sweet { position: absolute; top: -4px; bottom: -4px; background: rgba(0,255,120,.55); border: 2px solid #fff; border-radius: 4px; }
-    #swing .marker { position: absolute; top: -10px; width: 6px; height: 54px; background: #000; border: 2px solid #fff; border-radius: 3px; transform: translateX(-50%); }
-    #swing .power { position: absolute; top: -10px; width: 4px; height: 54px; background: var(--red); transform: translateX(-50%); display: none; }
-    #swing .label { margin-top: 18px; font-size: 20px; }
+    #swing { top: 96px; left: 50%; transform: translateX(-50%); display: none; text-align: center; }
+    #swing .label { font-size: 22px; white-space: nowrap; }
+    #swingArc { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; display: none; filter: drop-shadow(0 3px 0 rgba(0,0,0,.45)); }
     #aimhint { bottom: 200px; left: 50%; transform: translateX(-50%); font-size: 20px; display: none; text-align: center; }
     #intro { top: 90px; left: 50%; transform: translateX(-50%); width: min(90vw, 620px); background: rgba(244,236,216,.95); color: var(--ink); text-shadow: none; border-radius: 10px; border: 4px solid var(--ink); padding: 14px 20px 16px; display: none; box-shadow: 0 10px 0 rgba(0,0,0,.25); }
     #intro .num { font-family: 'Bangers'; font-size: 20px; letter-spacing: 2px; color: var(--red); }
@@ -51,6 +48,27 @@
     #intro p { margin: 6px 0 0; font-family: 'Special Elite', monospace; font-size: 17px; }
     #skip { bottom: 22px; right: 24px; font-size: 18px; opacity: .9; display: none; }
     .screen { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; background: radial-gradient(ellipse at center, rgba(20,25,35,.35), rgba(10,12,18,.8)); z-index: 5; }
+    #title { background: linear-gradient(180deg, rgba(10,12,18,.55) 0%, rgba(10,12,18,0) 38%, rgba(10,12,18,0) 52%, rgba(10,12,18,.75) 100%); justify-content: space-between; padding: 4vh 16px 3vh; }
+    #title .top { text-align: center; }
+    #title .bottom { display: flex; flex-direction: column; align-items: center; gap: 10px; width: min(96vw, 980px); }
+    #garage { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .car { pointer-events: auto; cursor: pointer; width: 172px; background: rgba(244,236,216,.95); color: var(--ink); text-shadow: none; border: 4px solid var(--ink); border-radius: 10px; padding: 8px 10px; box-shadow: 0 5px 0 rgba(0,0,0,.35); font-size: 14px; line-height: 1.25; }
+    .car h4 { margin: 0 0 4px; font-size: 16px; }
+    .car .stats { font-family: 'Special Elite', monospace; font-size: 12px; }
+    .car .blurb { font-family: 'Special Elite', monospace; font-size: 11.5px; margin-top: 4px; opacity: .85; }
+    .car.sel { border-color: var(--red); background: #fff7d6; transform: translateY(-4px); }
+    .car.locked { cursor: default; background: rgba(60,60,64,.9); color: #ccc; border-color: #222; }
+    .car.locked h4::before { content: '🔒 '; }
+    #careerBar { width: min(92vw, 620px); background: rgba(20,18,16,.8); border: 3px solid var(--gold); border-radius: 12px; padding: 8px 14px; font-size: 16px; text-align: center; }
+    #careerBar .goal { font-family: 'Special Elite', monospace; font-size: 15px; margin-top: 2px; }
+    .meter { height: 10px; background: rgba(255,255,255,.2); border-radius: 5px; margin-top: 6px; overflow: hidden; }
+    .meter div { height: 100%; background: var(--gold); }
+    #resetBtn { pointer-events: auto; cursor: pointer; font-size: 12px; opacity: .6; text-decoration: underline; margin-top: 2px; }
+    #results .wrap { display: flex; gap: 22px; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
+    #results .careerBox { width: min(92vw, 300px); background: rgba(20,18,16,.85); border: 3px solid var(--gold); border-radius: 12px; padding: 14px 16px; font-size: 17px; line-height: 1.4; }
+    #results .careerBox h3 { margin: 0 0 6px; color: var(--gold); letter-spacing: 1px; }
+    #results .careerBox .unlock { margin-top: 10px; padding: 8px 10px; background: var(--gold); color: #000; border-radius: 8px; transform: rotate(-2deg); text-shadow: none; animation: pop .5s cubic-bezier(.3,1.8,.6,1); }
+    @keyframes pop { from { transform: scale(.3) rotate(-8deg); } to { transform: scale(1) rotate(-2deg); } }
     .screen.show { display: flex; }
     #title h1 { font-family: 'Bangers', cursive; font-size: clamp(64px, 12vw, 150px); margin: 0; color: #ffd23f; -webkit-text-stroke: 5px #000; transform: rotate(-4deg); letter-spacing: 3px; text-shadow: 0 10px 0 #000; }
     #title h3 { margin: 8px 0 26px; font-size: 26px; letter-spacing: 2px; }
@@ -85,34 +103,40 @@
   <div id="popups" class="hud"></div>
   <div id="commentary" class="hud"><b>DOUGIE:</b><span></span></div>
   <div id="bam" class="hud">BAM!</div>
-  <div id="swing" class="hud">
-    <div class="bar"><div class="sweet"></div><div class="power"></div><div class="marker"></div></div>
-    <div class="label">CLICK / SPACE to start your swing</div>
-  </div>
-  <div id="aimhint" class="hud">◀ A / D ▶ to aim &nbsp;·&nbsp; CLICK or SPACE to swing</div>
+  <svg id="swingArc" class="hud"></svg>
+  <div id="swing" class="hud"><div class="label">CLICK / SPACE to start your swing</div></div>
+  <div id="aimhint" class="hud">◀ A / D ▶ to aim &nbsp;·&nbsp; CLICK or SPACE to wind up the Big Boot</div>
   <div id="intro" class="hud"><div class="num"></div><h2></h2><div class="pts"></div><p></p></div>
   <div id="skip" class="hud">SPACE / CLICK to skip the tour ▸</div>
   <div id="fps" class="hud"></div>
 
   <div id="title" class="screen">
-    <h1>DOWNHILL BAM!</h1>
-    <h3>STAGE 1 — THE ROYAL MILE, EDINBURGH</h3>
-    <button class="btn" id="startBtn">PLAY</button>
-    <div class="keys">
-      Thwack your trolley down the hill with a golf swing. Smash things. Score big.<br/>
-      <b>A / D</b> or <b>◀ ▶</b> steer &nbsp;·&nbsp; <b>SPACE</b> hop &nbsp;·&nbsp; <b>R</b> restart
+    <div class="top">
+      <h1>DOWNHILL BAM!</h1>
+      <h3 id="stageName">STAGE 1 — THE ROYAL MILE, EDINBURGH</h3>
+    </div>
+    <div class="bottom">
+      <div id="careerBar"></div>
+      <div id="garage"></div>
+      <button class="btn" id="startBtn">PLAY</button>
+      <div class="keys">
+        Give your vehicle the Big Boot down the hill. Smash things. Score big. Unlock the rest of Edinburgh.<br/>
+        <b>A / D</b> or <b>◀ ▶</b> steer &nbsp;·&nbsp; <b>SPACE</b> hop &nbsp;·&nbsp; <b>R</b> restart
+      </div>
+      <div id="resetBtn">reset progress</div>
     </div>
   </div>
 
   <div id="results" class="screen">
-    <div class="invoice"></div>
+    <div class="wrap"><div class="invoice"></div><div class="careerBox"></div></div>
     <div class="row">
       <button class="btn" id="retryBtn">GO AGAIN (R)</button>
+      <button class="btn alt" id="garageBtn">GARAGE</button>
       <button class="btn alt" id="tourBtn">WATCH THE TOUR</button>
     </div>
   </div>
 
-  <div id="loading">Loading the Royal Mile…</div>
+  <div id="loading">Loading Edinburgh…</div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

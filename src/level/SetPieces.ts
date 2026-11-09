@@ -111,13 +111,10 @@ export function kicker(sEnd: number, u: number, len: number, height: number, sig
 }
 
 // =====================================================================
-// 0. Castle Esplanade: gatehouse, cannon, the Royal Mile Trolley Launcher™
+// 0. Castle Esplanade: gatehouse, cannon (the launcher itself is the Big Boot, see Boot.ts)
 // =====================================================================
-export interface Launcher {
-  club: THREE.Group;
-}
-
-export function castleEsplanade(rockShift = 0, rockScale = 1.6): Launcher {
+/** `castle: false` leaves out the rock and keep behind the gatehouse (the long course builds its own). */
+export function castleEsplanade(opts: { castle?: boolean } = {}) {
   const stone = M.stone(34, 46, 11, 4, 2);
   const dark = M.stone(30, 34, 12, 2, 2);
   // parapet walls along the esplanade
@@ -166,13 +163,15 @@ export function castleEsplanade(rockShift = 0, rockScale = 1.6): Launcher {
   flagGroup.add(flag);
   G.scene.add(flagGroup);
   // castle rock & keep looming behind
-  const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(30, 1), color(0x4a4640, 1));
-  rock.scale.set(rockScale, 0.8, 1);
-  rock.position.set(rockShift, -6, -32);
-  g.add(rock);
-  g.add(bx(40, 14, 16, dark, 0, 12, -26));
-  g.add(bx(14, 10, 10, stone, -8, 22, -26));
-  g.add(bx(10, 8, 8, stone, 10, 20, -28));
+  if (opts.castle !== false) {
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(30, 1), color(0x4a4640, 1));
+    rock.scale.set(1.6, 0.8, 1);
+    rock.position.set(0, -6, -32);
+    g.add(rock);
+    g.add(bx(40, 14, 16, dark, 0, 12, -26));
+    g.add(bx(14, 10, 10, stone, -8, 22, -26));
+    g.add(bx(10, 8, 8, stone, 10, 20, -28));
+  }
   add(g);
   staticBox(s0, 0, baseH(s0) + 6, 15, 7, 2);
   G.updaters.push((dt) => {
@@ -206,31 +205,6 @@ export function castleEsplanade(rockShift = 0, rockScale = 1.6): Launcher {
   bg.add(banner);
   add(bg);
   for (const side of [-1, 1]) staticBox(-4, side * 7.3, baseH(-4) + 2.7, 0.12, 2.7, 0.12);
-
-  // The Royal Mile Trolley Launcher™: a gantry and a giant golf club
-  const ls = START_S - 1.15;
-  const lg = roadGroup(ls, 0, 0);
-  const wood = M.wood(28, 34, 6);
-  for (const x of [-1.5, 1.5]) lg.add(bx(0.25, 4.4, 0.25, wood, x, 2.2, 0));
-  lg.add(bx(3.4, 0.3, 0.35, wood, 0, 4.4, 0));
-  const plate = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.5), mapMat(signTex(['ROYAL MILE TROLLEY LAUNCHER™'], '#5a1420', '#f2c14e', 512, 80)));
-  plate.position.set(0, 4.95, 0.01);
-  plate.rotation.y = Math.PI;
-  lg.add(plate);
-  const club = new THREE.Group();
-  club.position.set(0, 4.25, 0);
-  const shaft = cyl(0.05, 0.05, 3.5, M.steel(), 0, -1.75, 0, 10);
-  club.add(shaft);
-  const grip = cyl(0.08, 0.08, 0.6, M.black(), 0, -0.3, 0, 10);
-  club.add(grip);
-  const head = bx(0.55, 0.55, 0.38, color(0x8a5a2b, 0.4), 0, -3.6, 0.05);
-  club.add(head);
-  const face = bx(0.5, 0.45, 0.04, M.steel(), 0, -3.6, 0.25);
-  club.add(face);
-  lg.add(club);
-  G.scene.add(lg);
-  for (const x of [-1.5, 1.5]) staticBox(ls, -x, baseH(ls) + 2.2, 0.13, 2.2, 0.13);
-  return { club };
 }
 
 // =====================================================================
@@ -1127,3 +1101,4 @@ export function scatter(exclude: [number, number][]) {
 
 export { START_S };
 export { bx, cyl, cone, once, crenellate };
+export { stall, phoneBox };
