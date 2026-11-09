@@ -415,7 +415,7 @@ function grassmarket() {
         },
       });
     }
-    G.crowd.tourist(s + 1.2, u - 1.3, 'tourist', 0, 'Drinker Spilled', 200);
+    G.crowd.tourist(s + 1.2, u - 1.3, 'tourist', 0, 'Drinker Spilled', 150);
   }
 
   // the Covenanters' Memorial: a round of setts behind railings, a saltire in stone
@@ -820,7 +820,7 @@ function derby() {
       for (let k = 0; k < 4; k++) {
         const s = sA + row * 1.9 + (r() - 0.5) * 0.7;
         const u = -6.9 + k * 4.6 + (r() - 0.5) * 1.4;
-        const t = G.crowd.tourist(s, u, team, 0, team === 'hearts' ? 'Hearts Fan' : 'Hibs Fan', 200);
+        const t = G.crowd.tourist(s, u, team, 0, team === 'hearts' ? 'Hearts Fan' : 'Hibs Fan', 150);
         const f = forward(s).multiplyScalar(facing);
         t.faceYaw = Math.atan2(-f.z, f.x) + (r() - 0.5) * 0.5;
         teams[team].push(t);
@@ -877,7 +877,7 @@ function derby() {
         el.innerHTML = `<small>FULL TIME · STILL STANDING</small>HEARTS ${hs} &nbsp;–&nbsp; ${bs} HIBS<br/>${verdict}`;
         G.commentary.show(line, 5);
         G.sfx.cheer(2.5);
-        if (knocked > 0) G.scoring.award('DERBY DAY!', 150 * knocked, G.trolley.position.add(new THREE.Vector3(0, 2.5, 0)), true, 'derby');
+        if (knocked > 0) G.scoring.award('DERBY DAY!', Math.min(1500, 75 * knocked), G.trolley.position.add(new THREE.Vector3(0, 2.5, 0)), true, 'derby');
       }
     } else if (G.time - ftAt > 5.5) {
       el.style.display = 'none';

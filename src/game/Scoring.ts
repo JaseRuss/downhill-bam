@@ -91,7 +91,16 @@ export class Scoring {
     else this.combo = 1;
     this.lastHit = now;
     this.mult = 1 + Math.min(4, Math.floor((this.combo - 1) / 3) * 0.5);
-    const pts = Math.round(base * this.mult);
+    let mult = this.mult;
+    if (kind === 'tourist' && base <= 200) {
+      // crowds: each further person of the same sort is worth a bit less (down to 35%), and people
+      // keep a combo going but are only multiplied up to x2, so ploughing a crowd can't outscore
+      // the set pieces
+      const n = this.log.get(label)?.count ?? 0;
+      base = Math.round(Math.max(base * 0.35, base * Math.pow(0.9, n)));
+      mult = Math.min(mult, 2);
+    }
+    const pts = Math.round(base * mult);
     this.score += pts;
     const item = this.log.get(label) ?? { label, count: 0, points: 0 };
     item.count++;

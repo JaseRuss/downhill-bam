@@ -146,6 +146,17 @@
     body.mobile #results .careerBox { width: 34vw; font-size: 14px; padding: 10px 12px; }
     body.mobile #results .row { margin-top: 8px; }
     body.mobile #fps { display: none; }
+    /* phones: size screens to the part actually visible (not behind the browser bars), and pin
+       the buttons that matter to the bottom of it so they can never be pushed off */
+    body.mobile .screen { height: 100vh; height: 100dvh; bottom: auto; }
+    body.mobile #title .bottom { padding-bottom: 50px; }
+    body.mobile #startBtn { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 7; font-size: 22px; padding: 8px 40px; }
+    body.mobile #startBtn:hover { transform: translateX(-50%); }
+    body.mobile #resetBtn { position: fixed; top: calc(6px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left)); margin: 0; }
+    body.mobile #results { justify-content: flex-start; padding-top: 8px; }
+    body.mobile #results .invoice { max-height: calc(100dvh - 76px); }
+    body.mobile #results .careerBox { max-height: calc(100dvh - 76px); overflow: auto; }
+    body.mobile #results .row { position: fixed; left: 0; right: 0; bottom: calc(6px + env(safe-area-inset-bottom)); margin: 0; text-align: center; z-index: 7; }
     #fps { bottom: 6px; left: 8px; font-size: 12px; font-family: monospace; opacity: .7; }
   </style>
 </head>

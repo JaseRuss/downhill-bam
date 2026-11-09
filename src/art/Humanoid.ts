@@ -386,12 +386,12 @@ export function fanOutfit(team: 'hearts' | 'hibs', r: () => number): Outfit {
   };
 }
 
-/** A wizard-film fan: black robe over black, the hair is anybody's. */
+/** A wizard-film fan: a maroon robe over maroon, the hair is anybody's. */
 export function wizardOutfit(r: () => number): Outfit {
   const pick = <T,>(a: T[]) => a[Math.floor(r() * a.length)];
   return {
-    skin: color(pick(SKINS), 0.7), shirt: color(0x1c1c1e, 0.85), longSleeves: true,
-    legs: 'robe', legMat: color(0x151517, 0.9), shoes: M.black(),
+    skin: color(pick(SKINS), 0.7), shirt: color(0x5a1424, 0.85), longSleeves: true,
+    legs: 'robe', legMat: color(0x6b1a2c, 0.9), shoes: M.black(),
     hair: color(pick(HAIR), 0.9), hairStyle: pick(['wild', 'short', 'long', 'bun'] as HairStyle[]),
     build: 0.85 + r() * 0.3, height: 1.45 + r() * 0.4,
   };
