@@ -3,9 +3,9 @@ import { RAPIER, Entity } from '../core/Physics';
 import { G } from '../ctx';
 import { M, color } from '../art/Materials';
 import { theta, toWorld, toRoad, forward, right } from '../world/Road';
-import { buildHuman, ghostOutfit, mimeOutfit, piperOutfit, poseFlail, poseSplat, poseStand, Rig, touristOutfit } from '../art/Humanoid';
+import { buildHuman, fanOutfit, ghostOutfit, mimeOutfit, piperOutfit, poseFlail, poseSplat, poseStand, Rig, touristOutfit } from '../art/Humanoid';
 
-type TouristKind = 'tourist' | 'ghost' | 'mime' | 'piper';
+export type TouristKind = 'tourist' | 'ghost' | 'mime' | 'piper' | 'hearts' | 'hibs';
 
 class Tourist implements Entity {
   kind = 'tourist';
@@ -24,7 +24,8 @@ class Tourist implements Entity {
   photographer = Math.random() < 0.35;
 
   constructor(s: number, u: number, public type: TouristKind, public label: string, public points: number, yOff = 0) {
-    const outfit = type === 'ghost' ? ghostOutfit() : type === 'mime' ? mimeOutfit() : type === 'piper' ? piperOutfit() : touristOutfit(Math.random);
+    const fan = type === 'hearts' || type === 'hibs';
+    const outfit = fan ? fanOutfit(type, Math.random) : type === 'ghost' ? ghostOutfit() : type === 'mime' ? mimeOutfit() : type === 'piper' ? piperOutfit() : touristOutfit(Math.random);
     this.rig = buildHuman(outfit);
     this.half = this.rig.height / 2;
     const p = toWorld(s, u, this.half + yOff + 0.03);
@@ -41,7 +42,8 @@ class Tourist implements Entity {
     );
     this.mass = this.body.mass() || 45;
     G.physics.register(col, this);
-    this.dodgeChance = type === 'tourist' ? 0.45 : type === 'ghost' ? 0.2 : 0;
+    // fans are too busy shouting at each other to get out of the way
+    this.dodgeChance = type === 'tourist' ? 0.45 : type === 'ghost' ? 0.2 : fan ? 0.08 : 0;
     this.rig.root.position.y = -this.half;
     this.mesh.add(this.rig.root);
     this.props();
@@ -70,6 +72,16 @@ class Tourist implements Entity {
       const lantern = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.16, 0.1), M.emissive(0xffb84d, 2));
       lantern.position.y = -0.32;
       r.elbowR.add(lantern);
+    } else if (this.type === 'hearts' || this.type === 'hibs') {
+      // a two-colour bar scarf round the neck
+      const sc = this.type === 'hearts' ? M.stripes('#7a1f3d', '#f2f2f2') : M.stripes('#0b6b3a', '#f2f2f2');
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.035, 6, 14), sc);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = 0.33;
+      r.chest.add(ring);
+      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.36, 0.09), sc);
+      tail.position.set(0.12, 0.14, 0.05);
+      r.chest.add(tail);
     } else if (this.type === 'tourist') {
       const cam = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.12), M.black());
       if (this.photographer) {
@@ -207,6 +219,16 @@ class Tourist implements Entity {
       rig.shoulderR.rotation.set(0.2, 0, 0.9);
       rig.elbowR.rotation.z = 0.9;
       rig.shoulderL.rotation.set(-0.3, 0, 1.6 + Math.sin(this.bob * 1.5) * 0.4); // "and on yer left..."
+    } else if (this.type === 'hearts' || this.type === 'hibs') {
+      // squaring up: fists pumping, leaning in, bouncing on their toes
+      const ph = this.bob * 5 + this.seed * 3;
+      rig.shoulderL.rotation.set(-0.35, 0, 2.3 + Math.sin(ph) * 0.55);
+      rig.shoulderR.rotation.set(0.35, 0, 1.4 + Math.max(0, Math.sin(ph * 1.3 + 1)) * 1.2);
+      rig.elbowL.rotation.z = 0.6 + Math.sin(ph * 1.7) * 0.4;
+      rig.elbowR.rotation.z = 1.2;
+      rig.chest.rotation.z = -0.18 + Math.sin(ph * 0.5) * 0.06;
+      rig.head.rotation.z = 0.15;
+      rig.root.position.y = -this.half + Math.abs(Math.sin(ph * 0.9)) * 0.06;
     } else if (this.photographer) {
       rig.shoulderR.rotation.set(0.1, 0, 1.55);
       rig.elbowR.rotation.z = 1.9;

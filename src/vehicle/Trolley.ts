@@ -172,12 +172,17 @@ export class Trolley implements Entity {
 
   hop() {
     if (this.ejected || this.hops <= 0) return false;
-    if (G.time - this.lastGrounded > 0.25) return false;
+    // stuck in a hole (beached on rubble, wheels in the air)? you can still hop out
+    const stuck = this.speed < 1.5;
+    if (G.time - this.lastGrounded > 0.25 && !stuck) return false;
     this.hops--;
     if (this.hops <= 0 && this.hopCharge <= 0) this.hopCharge = HOP_RECHARGE;
-    const f = this.forwardDir;
-    const k = this.mass / 120;
-    this.body.applyImpulse({ x: f.x * 80 * k, y: this.mass * 6.2 * this.spec.hop, z: f.z * 80 * k }, true);
+    // a shove the way it's facing as well as up: a bit at speed, a lot when nearly stopped
+    const f = this.forwardDir.setY(0);
+    if (f.lengthSq() < 0.01) f.copy(forward(this.roadS));
+    f.normalize();
+    const fwd = this.mass * (2.0 + (stuck ? 3.0 : this.speed < 4 ? 1.5 : 0));
+    this.body.applyImpulse({ x: f.x * fwd, y: this.mass * 6.2 * this.spec.hop, z: f.z * fwd }, true);
     this.body.applyTorqueImpulse({ x: 0, y: 0, z: 0 }, true);
     G.sfx.boing();
     return true;

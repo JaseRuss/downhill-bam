@@ -4,6 +4,7 @@ import { G } from '../ctx';
 import { addStatic } from '../world/Batcher';
 import { M, color } from '../art/Materials';
 import { facadeTex, shopTex, signTex, SHOP_NAMES, rng } from '../art/Textures';
+import { shopWindow } from '../art/Interiors';
 import { HALF_STREET, BAYS, BAY_T, baseH, theta, toWorld, toRoad, L, roadGroup, right, edgeL, edgeR, forward } from '../world/Road';
 
 export interface Reserved {
@@ -123,6 +124,21 @@ export function tenement(s0: number, width: number, side: 1 | -1, height: number
   shop.position.set((side > 0 ? 1 : -1) * (depth / 2 + 0.1), groundLocal + 1.8, 0);
   shop.receiveShadow = true;
   g.add(shop);
+  // a real room behind the shop window (interior-mapped), laid over the window painted in shopTex:
+  // that texture puts the door left or right (its second random number) and the glass 80-220 px down
+  {
+    const rr = rng(seed);
+    rr();
+    const doorLeft = rr() < 0.5;
+    const [a, b] = doorLeft ? [136, 488] : [24, 376];
+    const ww = ((b - a) / 512) * shopW, wh = ((220 - 80) / 256) * 3.6;
+    const uc = (a + b) / 2 / 512;
+    const zc = side > 0 ? shopW / 2 - uc * shopW : -shopW / 2 + uc * shopW;
+    const win = shopWindow(ww, wh);
+    win.position.set((side > 0 ? 1 : -1) * (depth / 2 + 0.262), groundLocal + ((256 - 220) / 256) * 3.6, zc);
+    win.rotation.y = side > 0 ? Math.PI / 2 : -Math.PI / 2;
+    g.add(win);
+  }
 
   // projecting hanging sign now and again
   if (r() < 0.3) {

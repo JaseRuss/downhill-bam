@@ -371,6 +371,21 @@ export function touristOutfit(r: () => number): Outfit {
   };
 }
 
+/** Match-day fan: Hearts in maroon, Hibs in green, both in jeans. */
+export function fanOutfit(team: 'hearts' | 'hibs', r: () => number): Outfit {
+  const pick = <T,>(a: T[]) => a[Math.floor(r() * a.length)];
+  const shirt = team === 'hearts' ? 0x7a1f3d : 0x0b6b3a;
+  const hat: HatStyle = pick(['bucket', null, null, 'cap', 'bucket'] as HatStyle[]);
+  return {
+    skin: color(pick(SKINS), 0.7), shirt: color(shirt, 0.75), longSleeves: r() < 0.4,
+    legs: 'trousers', legMat: color(pick([0x2b3a55, 0x3d5a80, 0x22223b]), 0.85), shoes: color(r() < 0.5 ? 0xf2f2f2 : 0x222222, 0.6),
+    hair: color(pick(HAIR), 0.9), hairStyle: pick(['short', 'short', 'bald', 'wild'] as HairStyle[]),
+    beard: r() < 0.3 ? color(pick(HAIR), 0.9) : undefined,
+    hat, hatMat: color(team === 'hearts' ? (r() < 0.5 ? 0x7a1f3d : 0xf2f2f2) : r() < 0.5 ? 0x0b6b3a : 0xf2f2f2, 0.8),
+    build: 1.0 + r() * 0.3, height: 1.65 + r() * 0.25,
+  };
+}
+
 export function mimeOutfit(): Outfit {
   return {
     skin: color(0xf7f7f7, 0.6), shirt: M.stripes('#111111', '#f2f2f2'), longSleeves: true,

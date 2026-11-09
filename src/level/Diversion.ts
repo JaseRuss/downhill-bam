@@ -749,6 +749,92 @@ function digger(s: number, u: number) {
   });
 }
 
+/** Which tram-works closure is left out to make room for the derby squabble. */
+const DERBY_GAP = 3;
+
+/**
+ * Match day on Leith Walk: Hearts fans squaring up to Hibs fans across the whole street. Knock
+ * them over; the side with more fans still standing at full time wins.
+ */
+function derby() {
+  const s0 = MARKS.leithwalk + 22 + DERBY_GAP * 44 - 6;
+  if (!on(s0 + 30)) return;
+  const el = document.getElementById('derby')!;
+  el.style.display = 'none';
+  el.classList.remove('ft');
+  const teams = { hearts: [] as { scored: boolean }[], hibs: [] as { scored: boolean }[] };
+  const r = rng(1874);
+  const squad = (team: 'hearts' | 'hibs', sA: number, facing: number) => {
+    for (let row = 0; row < 3; row++) {
+      for (let k = 0; k < 4; k++) {
+        const s = sA + row * 1.9 + (r() - 0.5) * 0.7;
+        const u = -6.9 + k * 4.6 + (r() - 0.5) * 1.4;
+        const t = G.crowd.tourist(s, u, team, 0, team === 'hearts' ? 'Hearts Fan' : 'Hibs Fan', 200);
+        const f = forward(s).multiplyScalar(facing);
+        t.faceYaw = Math.atan2(-f.z, f.x) + (r() - 0.5) * 0.5;
+        teams[team].push(t);
+      }
+    }
+  };
+  squad('hearts', s0, 1); // uphill, facing down the Walk
+  squad('hibs', s0 + 9.5, -1); // downhill, facing back up
+  const n = teams.hearts.length;
+  // a flag for each end
+  for (const [team, s, u, bg, fg, txt] of [
+    ['hearts', s0 - 1, -8.2, '#7a1f3d', '#ffffff', 'JAMBOS'],
+    ['hibs', s0 + 16, 8.2, '#0b6b3a', '#ffffff', 'HIBEES'],
+  ] as const) {
+    void team;
+    const g = roadGroup(s, u, 0);
+    g.add(cyl(0.03, 0.03, 3.2, M.steel(), 0, 1.6, 0, 6));
+    const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.0), new THREE.MeshStandardMaterial({ map: signTex([txt], bg, fg, 256, 160), side: THREE.DoubleSide }));
+    flag.position.set(0, 2.7, 0.8);
+    flag.rotation.y = Math.PI / 2;
+    g.add(flag);
+    add(g);
+  }
+
+  const down = (team: 'hearts' | 'hibs') => teams[team].filter((t) => t.scored).length;
+  let shown = false;
+  let ftAt = -1;
+  trigger(s0 - 45, () => {
+    G.commentary.show("It's derby day on Leith Walk! Hearts and Hibs are squaring up in the middle of the road!", 4);
+    shown = true;
+  });
+  G.updaters.push(() => {
+    if (!shown) return;
+    if (ftAt < 0) {
+      el.style.display = 'block';
+      el.innerHTML = `<small>LEITH WALK DERBY · KNOCKED OVER</small>HEARTS ${down('hearts')} &nbsp;–&nbsp; ${down('hibs')} HIBS`;
+      if (G.trolley.roadS > s0 + 34 || (G.trolley.ejected && G.trolley.roadS > s0 - 5 && !G.trolley.runner)) {
+        // full time: whoever has more fans still on their feet wins
+        ftAt = G.time;
+        const hs = n - down('hearts'), bs = n - down('hibs');
+        const knocked = down('hearts') + down('hibs');
+        let verdict: string, line: string;
+        if (hs === bs) {
+          verdict = hs === 0 ? 'EVERYBODY DOWN!' : 'SCORE DRAW!';
+          line = hs === 0 ? "Both sets of fans flattened. The polis are calling it a draw." : `${hs} apiece still standing. A score draw. Nobody's happy. Typical derby.`;
+        } else if (hs > bs) {
+          verdict = 'HEARTS WIN!';
+          line = `Full time on Leith Walk: ${hs} Hearts fans still standing to ${bs} Hibs. The Jambos take the derby!`;
+        } else {
+          verdict = 'HIBS WIN!';
+          line = `Full time on Leith Walk: ${bs} Hibs fans still standing to ${hs} Hearts. Sunshine on Leith!`;
+        }
+        el.classList.add('ft');
+        el.innerHTML = `<small>FULL TIME · STILL STANDING</small>HEARTS ${hs} &nbsp;–&nbsp; ${bs} HIBS<br/>${verdict}`;
+        G.commentary.show(line, 5);
+        G.sfx.cheer(2.5);
+        if (knocked > 0) G.scoring.award('DERBY DAY!', 150 * knocked, G.trolley.position.add(new THREE.Vector3(0, 2.5, 0)), true, 'derby');
+      }
+    } else if (G.time - ftAt > 5.5) {
+      el.style.display = 'none';
+      shown = false;
+    }
+  });
+}
+
 function leithWalkWorks() {
   const sA = MARKS.leithwalk + 22, sB = MARKS.foot - 20;
   if (!on(sA)) return;
@@ -756,6 +842,7 @@ function leithWalkWorks() {
   const orange = color(0xff6a13, 0.6);
   let i = 0;
   for (let s = sA; s < sB && on(s); s += 44, i++) {
+    if (i === DERBY_GAP) continue; // the fans have taken over this bit of road
     const side = i % 2 ? 1 : -1;
     const len = 24;
     // taper of cones into the closure
@@ -1112,6 +1199,7 @@ export function buildDiversion(tier: number): Level {
   if (tier >= 4) {
     walnutWhip();
     leithWalkWorks();
+    derby();
     queenVictoria(m.foot + 8, 6.3);
     shore();
     isSea = sea(G.scene);

@@ -20,6 +20,7 @@ import { buildDiversion } from '../level/Diversion';
 import { Boot, ARC_R } from '../level/Boot';
 import { bake } from '../world/Batcher';
 import { Backdrop, HAAR } from '../world/Backdrop';
+import { initInteriors } from '../art/Interiors';
 import { FINISH_S, START_S, toWorld, theta, edgeL, edgeR, baseH } from '../world/Road';
 import * as Road from '../world/Road';
 
@@ -108,6 +109,8 @@ export class Game {
       }
     });
 
+    // render the shop interiors once, before any shop windows are built
+    initInteriors(this.renderer);
     this.build();
     this.enterTitle();
     (window as any).G = G;
@@ -213,6 +216,7 @@ export class Game {
 
   teardown() {
     this.hud.clear();
+    $('derby').style.display = 'none';
     this.sfx.engineHum(false, 0);
     G.fx.clear();
     G.crowd.dispose();
@@ -243,6 +247,8 @@ export class Game {
   toTitle() {
     $('results').classList.remove('show');
     this.teardown();
+    // render the shop interiors once, before any shop windows are built
+    initInteriors(this.renderer);
     this.build();
     this.enterTitle();
   }

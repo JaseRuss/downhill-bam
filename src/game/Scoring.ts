@@ -69,6 +69,9 @@ const COSTS: Record<string, [number, string]> = {
   'WE ARE NOT AMUSED!': [0, 'Formal apology to the Palace'],
   'SPLASHDOWN!': [7500, 'Coastguard callout, Firth of Forth'],
   'FINISHED!': [0, 'Finish line repainting'],
+  'Hearts Fan': [0, 'Hearts fan (claims it was a dive)'],
+  'Hibs Fan': [0, 'Hibs fan (wants it checked by VAR)'],
+  'DERBY DAY!': [9500, 'Police overtime, Edinburgh derby'],
 };
 
 export class Scoring {

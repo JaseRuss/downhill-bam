@@ -17,7 +17,7 @@ Open http://localhost:5173.
 | --- | --- |
 | A / D or ◀ ▶ | Aim before the swing · steer during the run · swivel when nearly stopped |
 | Click / Space | The Big Boot: start the wind-up → set power → time the kick (hit the green as the boot comes down) |
-| Space / W / ▲ | Hop during the run (one hop; it comes back 5 seconds after you use it) |
+| Space / W / ▲ | Hop during the run (one hop; it comes back 5 seconds after you use it). The hop shoves you forward too, hardest when you're stuck, so it gets you out of craters |
 | R | Restart |
 
 ## The launch
@@ -47,7 +47,11 @@ Castle Esplanade launch · whisky barrel pyramid · the piper & tartan shop · S
 
 ### Stages 2–4 — the long way round (`src/level/Diversion.ts`)
 
-George IV Bridge diversion (signs, an occupied portaloo) · Victoria Street's painted shops, Victoria Terrace and the broom shop (BROOM BROOM) · Grassmarket beer garden (ROUND'S ON YOU), the Covenanters' Memorial and the ENGINES ON gantry · King's Stables Road under the castle crags, parked cars and a traffic warden · the Caledonian Hotel · Princes Street: the sunken gardens (lawns, railway and a parked train, the Mound with its two galleries, the Ross Fountain, the floral clock, Waverley's glass roof, castle rock rising to the Old Town), the Scott Monument, the Christmas market, a big wheel that rolls away when you knock its legs out, and a tram coming the other way · the Balmoral clock · the "Walnut Whip" · Leith Walk tram works (diggers, skips, closures to slalom) · Queen Victoria at the Foot of the Walk (WE ARE NOT AMUSED) · Newhaven lighthouse · the Starbank sea wall and slipway, and SPLASHDOWN in the Forth.
+George IV Bridge diversion (signs, an occupied portaloo) · Victoria Street's painted shops, Victoria Terrace and the broom shop (BROOM BROOM) · Grassmarket beer garden (ROUND'S ON YOU), the Covenanters' Memorial and the ENGINES ON gantry · King's Stables Road under the castle crags, parked cars and a traffic warden · the Caledonian Hotel · Princes Street: the sunken gardens (lawns, railway and a parked train, the Mound with its two galleries, the Ross Fountain, the floral clock, Waverley's glass roof, castle rock rising to the Old Town), the Scott Monument, the Christmas market, a big wheel that rolls away when you knock its legs out, and a tram coming the other way · the Balmoral clock · the "Walnut Whip" · Leith Walk tram works (diggers, skips, closures to slalom) · a Hearts v Hibs match-day squabble across Leith Walk (a scoreboard counts each side knocked over; at full time the side with more fans still standing wins) · Queen Victoria at the Foot of the Walk (WE ARE NOT AMUSED) · Newhaven lighthouse · the Starbank sea wall and slipway, and SPLASHDOWN in the Forth.
+
+## Shop interiors
+
+Every ground-floor shop window shows a room behind the glass using interior mapping, the trick open-world games use for city windows. At start-up four little 3D rooms (a pub, a gift shop, a café and a kilt shop) are built and rendered once into cubemaps (`src/art/Interiors.ts`). Each window is then a single flat quad whose shader traces the view ray into an imaginary box room and looks the hit point up in the cubemap, so the rooms have depth and parallax as you drive past. All windows share one material, so they batch into a handful of draw calls.
 
 ## Code map
 
