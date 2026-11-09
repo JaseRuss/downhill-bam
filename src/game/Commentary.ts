@@ -44,7 +44,7 @@ const LINES: Record<string, string[]> = {
   stopped: ["And he's... stopped. Well. That's that then.", "Out of steam. Like the rest of us."],
   wreck: ["It's a write-off. The trolley, the street, everything."],
   results: ["The council will be in touch.", "Same time tomorrow?"],
-  brew: ["IRN BREW! Scotland's other national drink!", "Made from girders! He's away!", "That's the sugar kicking in! Hold on tae yer kilt!", "One can and he's flying! Imagine two!"],
+  skoosh: ["SKOOSH! Pure sugar, pure speed!", "A can of skoosh and he's away like a rocket!", "That's the fizz kicking in! Hold on tae yer kilt!", "One can and he's flying! Imagine two!"],
   // the Big Boot
   boot: ["THE BOOT HAS SPOKEN!", "Right up the jacksie!", "That's a size forty-seven, that.", "Ye've been booted, son!"],
   intro_long: [

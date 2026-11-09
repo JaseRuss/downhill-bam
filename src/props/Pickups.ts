@@ -5,36 +5,51 @@ import { canvas } from '../art/Textures';
 import { toWorld } from '../world/Road';
 
 /** Seconds of boost from one can. */
-export const BREW_BOOST = 4;
+export const SKOOSH_BOOST = 4;
 
 let canMat: THREE.MeshStandardMaterial | null = null;
 function label() {
   if (canMat) return canMat;
   const c = canvas(256, 128);
   const g = c.getContext('2d')!;
-  g.fillStyle = '#f26a1b';
+  g.fillStyle = '#5b2a86';
   g.fillRect(0, 0, 256, 128);
-  // the blue chevron band and the name
-  g.fillStyle = '#1d4fa3';
-  g.beginPath();
-  g.moveTo(0, 38); g.lineTo(128, 58); g.lineTo(256, 38); g.lineTo(256, 92); g.lineTo(128, 112); g.lineTo(0, 92);
-  g.fill();
-  g.fillStyle = '#ffffff';
-  g.font = 'bold 34px Arial Black, Arial';
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  for (const x of [64, 192]) g.fillText('IRN BREW', x, 76);
+  // bubbles, a yellow lightning bolt and the name, twice round the can
+  g.fillStyle = 'rgba(255,255,255,0.18)';
+  for (let i = 0; i < 40; i++) {
+    g.beginPath();
+    g.arc(Math.random() * 256, Math.random() * 128, 2 + Math.random() * 5, 0, Math.PI * 2);
+    g.fill();
+  }
+  for (const x of [0, 128]) {
+    g.fillStyle = '#ffd400';
+    g.beginPath();
+    g.moveTo(x + 22, 14); g.lineTo(x + 40, 14); g.lineTo(x + 32, 52); g.lineTo(x + 46, 52); g.lineTo(x + 18, 114); g.lineTo(x + 26, 66); g.lineTo(x + 12, 66);
+    g.fill();
+    g.fillStyle = '#ffffff';
+    g.font = 'bold 30px Arial Black, Arial';
+    g.textAlign = 'left';
+    g.textBaseline = 'middle';
+    g.save();
+    g.translate(x + 52, 64);
+    g.rotate(-0.12);
+    g.fillText('SKOOSH', 0, 0);
+    g.font = 'bold 12px Arial';
+    g.fillStyle = '#ffd400';
+    g.fillText('FIZZY GINGER · EXTRA FIZZ', 2, 24);
+    g.restore();
+  }
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
-  canMat = new THREE.MeshStandardMaterial({ map: t, roughness: 0.3, metalness: 0.5, emissive: 0x401800, emissiveIntensity: 0.6 });
+  canMat = new THREE.MeshStandardMaterial({ map: t, roughness: 0.3, metalness: 0.5, emissive: 0x200830, emissiveIntensity: 0.6 });
   return canMat;
 }
 
 /**
- * A giant can of IRN BREW floating over the road. Drive through it for a few seconds of
+ * A giant can of SKOOSH (Scots for a fizzy drink) floating over the road. Drive through it for a few seconds of
  * sugar-powered boost (it works with or without an engine).
  */
-export function brewCan(s: number, u: number) {
+export function skooshCan(s: number, u: number) {
   const g = new THREE.Group();
   const body = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.9, 24, 1, true), label());
   g.add(body);
@@ -50,7 +65,7 @@ export function brewCan(s: number, u: number) {
   g.add(tab);
   g.traverse((o: any) => o.isMesh && (o.castShadow = true));
   // a glowing ring on the cobbles so you can see it coming
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.3, 32), new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: 0.6, depthWrite: false }));
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.3, 32), new THREE.MeshBasicMaterial({ color: 0xffd400, transparent: true, opacity: 0.6, depthWrite: false }));
   ring.rotation.x = -Math.PI / 2;
   const base = toWorld(s, u, 0);
   ring.position.copy(base).add(new THREE.Vector3(0, 0.06, 0));
@@ -71,12 +86,12 @@ export function brewCan(s: number, u: number) {
     if (Math.hypot(p.x - g.position.x, p.z - g.position.z) < 1.9 && Math.abs(p.y - base.y) < 3) {
       taken = true;
       G.scene.remove(g, ring);
-      tr.boost(BREW_BOOST);
+      tr.boost(SKOOSH_BOOST);
       G.sfx.fizz();
       G.fx.sparkle(g.position.clone(), 22);
-      G.fx.splash(g.position.clone(), 0xf26a1b, 24);
-      G.scoring.award('IRN BREW!', 250, g.position.clone().add(new THREE.Vector3(0, 1, 0)), true, 'brew');
-      G.commentary.say('brew', true);
+      G.fx.splash(g.position.clone(), 0x9b59d0, 24);
+      G.scoring.award('SKOOSH!', 250, g.position.clone().add(new THREE.Vector3(0, 1, 0)), true, 'skoosh');
+      G.commentary.say('skoosh', true);
       G.shake(0.4);
     }
   });

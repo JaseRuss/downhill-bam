@@ -16,7 +16,7 @@ import { barrier, bench, bollard, communalBin, lampPost, aBoard, cone as conePro
 import type { Part } from '../destruction/Destruction';
 import { TOUR as RM_TOUR, TourInfo, Level, tourStops } from './RoyalMile';
 import { princesGardens, inGardens, GARDEN_START } from './Gardens';
-import { brewCan } from '../props/Pickups';
+import { skooshCan } from '../props/Pickups';
 
 /**
  * The long course: the Royal Mile is shut, so it's down George IV Bridge and Victoria Street to the
@@ -1187,8 +1187,8 @@ export function buildDiversion(tier: number): Level {
 
   victoriaStreet();
   grassmarket();
-  // IRN BREW at the start of the two long runs: across the Grassmarket, and down Leith Walk
-  brewCan(m.grassmarket + 4, 0);
+  // SKOOSH at the start of the two long runs: across the Grassmarket, and down Leith Walk
+  skooshCan(m.grassmarket + 4, 0);
   if (tier >= 3) {
     kingsStables();
     caledonian();
@@ -1203,7 +1203,7 @@ export function buildDiversion(tier: number): Level {
     walnutWhip();
     leithWalkWorks();
     derby();
-    brewCan(m.leithwalk + 6, 0);
+    skooshCan(m.leithwalk + 6, 0);
     queenVictoria(m.foot + 8, 6.3);
     shore();
     isSea = sea(G.scene);

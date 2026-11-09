@@ -676,7 +676,7 @@ export class Game {
     if (this.state === 'run' || this.state === 'aim') {
       const e = this.spec.engine;
       let eng = e ? (t.splashed ? 'ENGINE: FLOODED' : t.engineOn ? (t.ejected ? 'ENGINE: CUT OUT' : 'ENGINE: ON') : 'ENGINE: STARTS AT THE GRASSMARKET') : '';
-      if (t.boostT > 0 && !t.ejected) eng = `IRN BREW BOOST ${t.boostT.toFixed(1)}s` + (eng ? ' · ' + eng : '');
+      if (t.boostT > 0 && !t.ejected) eng = `SKOOSH BOOST ${t.boostT.toFixed(1)}s` + (eng ? ' · ' + eng : '');
       this.hud.setRun(t.speed, t.hops, t.hopCharge, t.ejected, t.roadS, START_S, FINISH_S, !!t.runner, eng);
       this.sfx.rolling(t.splashed ? 0 : t.speed, t.grounded);
       this.sfx.engineHum(this.state === 'run' && t.engineOn && !t.ejected && !t.splashed, t.speed, e?.sound ?? 1);

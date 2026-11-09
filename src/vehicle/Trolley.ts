@@ -14,7 +14,7 @@ export class Trolley implements Entity {
   spec: VehicleSpec;
   parts!: VehicleParts;
   engineOn = false;
-  /** Seconds of IRN BREW boost left. */
+  /** Seconds of SKOOSH boost left. */
   boostT = 0;
   private fizzT = 0;
   /** Seconds until a used hop comes back (0 = not recharging). */
@@ -191,7 +191,7 @@ export class Trolley implements Entity {
     return true;
   }
 
-  /** A can of IRN BREW: a few seconds of shove, engine or no engine. */
+  /** A can of SKOOSH: a few seconds of shove, engine or no engine. */
   boost(secs: number) {
     this.boostT = Math.max(this.boostT, secs);
   }
@@ -306,7 +306,7 @@ export class Trolley implements Entity {
       this.body.addForce({ x: f.x * this.mass * push, y: 0, z: f.z * this.mass * push }, true);
     }
     this.engine(roadS, speed);
-    this.brew(h);
+    this.skoosh(h);
     this.buoyancy();
     // nearly stopped? Hamish paddles with his feet: steer keys swivel the trolley on the spot
     if (control && !this.ejected && this.launched && speed < 2.5 && steerInput !== 0) {
@@ -382,7 +382,7 @@ export class Trolley implements Entity {
   }
 
   /** The boost: a hard push the way it's facing, up to a (silly) top speed. */
-  private brew(h: number) {
+  private skoosh(h: number) {
     if (this.boostT <= 0) return;
     this.boostT = Math.max(0, this.boostT - h);
     if (this.ejected || this.splashed || !this.grounded || this.upDir.y < 0.5) return;
@@ -516,7 +516,7 @@ export class Trolley implements Entity {
       if (this.fizzT <= 0) {
         this.fizzT = 0.05;
         const back = this.forwardDir.multiplyScalar(-0.8).add(this.position).add(new THREE.Vector3(0, 0.5, 0));
-        G.fx.dust(back, 0.35, Math.random() < 0.5 ? 0xf26a1b : 0x1d4fa3, 2);
+        G.fx.dust(back, 0.35, Math.random() < 0.5 ? 0x9b59d0 : 0xffd400, 2);
       }
     }
     if (this.parts.exhaust && this.engineOn && !this.ejected && this.launched) {

@@ -20,9 +20,9 @@ Open http://localhost:5173.
 | Space / W / ▲ | Hop during the run (one hop; it comes back 5 seconds after you use it). The hop shoves you forward too, hardest when you're stuck, so it gets you out of craters |
 | R | Restart |
 
-## IRN BREW
+## SKOOSH
 
-Giant cans of IRN BREW float over the road at the start of the long runs: on the Royal Mile after the Fringe stage (a straight shot at the World's End wall), as you enter the Grassmarket, and at the top of Leith Walk. Drive through one for 4 seconds of shove up to about 58 mph, engine or no engine.
+Giant cans of SKOOSH (Scots for a fizzy drink: fizzy ginger, extra fizz) float over the road at the start of the long runs: on the Royal Mile after the Fringe stage (a straight shot at the World's End wall), as you enter the Grassmarket, and at the top of Leith Walk. Drive through one for 4 seconds of shove up to about 58 mph, engine or no engine.
 
 ## The launch
 
