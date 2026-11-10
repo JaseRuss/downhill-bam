@@ -1139,7 +1139,13 @@ export function buildDiversion(tier: number): Level {
   marchers(m.grassmarket + 84, 8);
   policeCar(m.grassmarket + 92, -(edgeL(m.grassmarket + 92) - 1.4));
   arcadeCabinet(m.victoria + 14, edgeR(m.victoria + 14) - 0.8);
+  // buskers out by the kerb: a mime and a piper on each stretch
+  const busker = (s: number, side: number, kind: 'mime' | 'piper') => G.crowd.tourist(s, side * ((side > 0 ? edgeR(s) : edgeL(s)) - 1.6), kind);
+  busker(m.grassmarket + 40, 1, 'mime');
+  busker(m.grassmarket + 120, -1, 'piper');
   if (tier >= 3) {
+    busker(m.princes + 100, 1, 'piper');
+    busker(m.princes + 150, -1, 'mime');
     kingsStables();
     policeCar(m.ksr + 64, 3.4); // booking the parked cars
     policeBox(m.princes + 62, -(edgeL(m.princes + 62) - 1.2));
@@ -1153,6 +1159,8 @@ export function buildDiversion(tier: number): Level {
   }
   let isSea = (_x: number, _z: number) => false;
   if (tier >= 4) {
+    busker(m.leithwalk + 250, 1, 'piper');
+    busker(m.junctionst + 10, 1, 'mime');
     walnutWhip();
     leithWalkWorks();
     derby();

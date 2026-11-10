@@ -3,8 +3,8 @@ import { RAPIER, Entity } from '../core/Physics';
 import { G } from '../ctx';
 import { toRoad, toWorld, edgeL, edgeR } from '../world/Road';
 import { buildHuman, D, hamishOutfit, poseFlail, poseRun, Rig } from '../art/Humanoid';
-import { pointyHat } from '../art/Accessories';
-import { color } from '../art/Materials';
+import { crashHelmet, halo, pointyHat, shades } from '../art/Accessories';
+import { color, M } from '../art/Materials';
 import { LOOK } from '../game/Cosmetics';
 
 /** Hamish as currently dressed: whatever costume and hat are equipped. */
@@ -15,10 +15,22 @@ export function hamishRig(withHat = true): Rig {
   else if (LOOK.costume === 'marcher') {
     o.shirt = color(0x2f55d4, 0.6);
     o.hair = o.beard = color(0x2fbf3a, 0.7);
+  } else if (LOOK.costume === 'mime') {
+    o.shirt = M.stripes('#111111', '#f2f2f2');
+    o.skin = color(0xf7f7f7, 0.6);
+    o.gloves = M.white();
   }
-  if (!withHat || LOOK.hat) o.hat = null;
+  // hats the figure builder already knows are just a different style; the rest are put on after
+  const hat = withHat ? LOOK.hat : undefined;
+  if (!withHat || hat) o.hat = null;
+  if (hat === 'feather') o.hat = 'feather';
+  else if (hat === 'top') (o.hat = 'top'), (o.hatMat = M.black());
+  else if (hat === 'bucket') (o.hat = 'bucket'), (o.hatMat = color(0xf4e3b2, 0.85));
   const rig = buildHuman(o);
-  if (withHat && LOOK.hat === 'wizard') rig.hat = pointyHat(rig, false);
+  if (hat === 'wizard') rig.hat = pointyHat(rig, false);
+  else if (hat === 'helmet') rig.hat = crashHelmet(rig);
+  else if (hat === 'halo') rig.hat = halo(rig);
+  if (LOOK.face === 'shades') shades(rig);
   return rig;
 }
 

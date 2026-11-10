@@ -115,6 +115,35 @@ export function pointyHat(r: Rig, dark: boolean) {
   return g;
 }
 
+/** A halo: a gold ring floating over the crown. */
+export function halo(r: Rig) {
+  const g = model('halo', () => {
+    const p = new Parts();
+    const gold = new THREE.MeshStandardMaterial({ color: 0xffd23f, emissive: 0xffc21a, emissiveIntensity: 1.6, roughness: 0.3 });
+    p.add(torus(0.95 * R, 0.08 * R, q(28, 14), 8), gold, hr(0, 1.0, 0), [Math.PI / 2, 0, 0]);
+    return p.build();
+  });
+  seatHat(g, scaleOf(r));
+  r.head.add(g);
+  return g;
+}
+
+/** A crash helmet: a red dome with a white stripe and a peak. */
+export function crashHelmet(r: Rig) {
+  const g = model('crashhelmet', () => {
+    const p = new Parts();
+    const shell = color(0xc8202a, 0.3, 0.1), stripe = color(0xf4f1ea, 0.4);
+    const dome: [number, number][] = [[1.12, -0.95], [1.16, -0.5], [1.12, -0.1], [0.95, 0.3], [0.6, 0.6], [0, 0.72]];
+    p.add(lathe(dome.map(([x, y]) => [x * R, y * R] as [number, number]), q(24, 12), { cap: 'none' }), shell);
+    p.add(rbox(2.0 * R, 0.06 * R, 0.3 * R, 0.02 * R, 1), stripe, hr(0, 0.66, 0));
+    p.add(rbox(0.5 * R, 0.06 * R, 1.5 * R, 0.02 * R, 1), shell, hr(1.25, -0.1, 0));
+    return p.build();
+  });
+  seatHat(g, scaleOf(r));
+  r.head.add(g);
+  return g;
+}
+
 /** Great Highland bagpipes: tartan bag under the arm, three drones over the shoulder. */
 export function bagpipes(r: Rig) {
   const g = model('bagpipes', () => {

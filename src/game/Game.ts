@@ -29,6 +29,9 @@ import { QUALITY, CAM } from '../core/Platform';
 import { FINISH_S, START_S, toWorld, theta, edgeL, edgeR, baseH } from '../world/Road';
 import * as Road from '../world/Road';
 
+/** Points that aren't for breaking something or hitting someone. */
+const HARMLESS = new Set(['FINISHED!', 'SPLASHDOWN!', 'SKOOSH!', 'EJECTED!', 'BACK IN!', 'ENGINE ON!', 'KILT LIFT!', 'Pigeon Panic', 'Seagull Scramble']);
+
 type State = 'title' | 'tour' | 'aim' | 'run' | 'ending' | 'results';
 
 const BAM_WORDS = ['BAM!', 'WALLOP!', 'SKELP!', 'BOOF!', 'CRASH!', 'KER-RANG!', 'SMASH!', 'OCH!'];
@@ -304,6 +307,7 @@ export class Game {
     this.attractT = 0;
     this.rig.mode = 'manual';
     this.renderGarage();
+    this.kitButtons();
     $('title').classList.add('show');
   }
 
@@ -354,11 +358,20 @@ export class Game {
     $('kit').classList.add('show');
   }
 
+  /** A padlock on the kit bag buttons until it's open. */
+  private kitButtons() {
+    for (const id of ['kitBtn', 'kitBtn2']) $(id).textContent = this.career.kitOpen ? 'KIT BAG' : '🔒 KIT BAG';
+  }
+
   renderKit() {
     const c = this.career;
     const d = c.data;
     const root = $('kitSlots');
     root.innerHTML = '';
+    if (!c.kitOpen) {
+      root.innerHTML = `<div class="slot"><h3>🔒 LOCKED</h3><div class="sub">The kit bag opens the first time you drive off Starbank Road into the Firth of Forth. Nothing counts towards it until then.</div></div>`;
+      return;
+    }
     const card = (cls: string, html: string, pick?: () => void) => {
       const el = document.createElement('div');
       el.className = `car ${cls}`;
@@ -533,12 +546,17 @@ export class Game {
     const t = G.trolley;
     const c = this.career;
     const stage = STAGES[this.tier - 1];
-    let res = { newly: [] as Goal[], record: false, prevBest: 0, extras: [] as Cosmetic[] };
+    let res = { newly: [] as Goal[], record: false, prevBest: 0, extras: [] as Cosmetic[], kitOpened: false };
     if (!this.recorded) {
       this.recorded = true;
       const downs: Record<string, number> = {};
       for (const p of G.crowd.tourists) if (p.scored) downs[p.type] = (downs[p.type] ?? 0) + 1;
-      res = c.record({ score: sc.score, tier: this.tier, finished: this.finished, splash: t.splashed, tally: { downs, police: policeTally() } });
+      res = c.record({ score: sc.score, tier: this.tier, finished: this.finished, splash: t.splashed, tally: {
+        downs, police: policeTally(), splash: t.splashed, ejects: t.ejectCount,
+        flocks: G.crowd.flocks.filter((f) => f.scored).length,
+        // scaring birds, hopping and picking up cans don't count as damage
+        clean: this.finished && [...sc.log.keys()].every((l) => HARMLESS.has(l)),
+      } });
     }
     const best = c.bestFor(this.tier);
     const rows = sc.invoice();
@@ -562,6 +580,7 @@ export class Game {
     const d = c.data;
     let box = `<h3>CAREER</h3><div>Points banked: <b>+${fmt(sc.score)}</b></div><div>Bank total: <b>${fmt(d.bank)}</b></div><div>Runs: ${d.runs}</div>`;
     for (const g of res.newly) box += `<div class="unlock">UNLOCKED!<br/>${g.reward}</div>`;
+    if (res.kitOpened) box += `<div class="unlock">KIT BAG OPEN!<br/>Side objectives now count</div>`;
     for (const k of res.extras) box += `<div class="unlock">KIT BAG!<br/>${k.name}</div>`;
     const next = c.next;
     if (next) {
@@ -578,6 +597,7 @@ export class Game {
     $('tourBtn').style.display = this.swapTo ? 'none' : '';
     $('results').classList.add('show');
     this.sfx.seagull();
+    this.kitButtons();
     if (res.newly.length || res.extras.length) {
       this.sfx.cheer(2);
       this.commentary.show(`Unlocked: ${[...res.newly.map((g) => g.reward), ...res.extras.map((k) => `${k.name} (in the kit bag)`)].join(' · ')}!`, 5);

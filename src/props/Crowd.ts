@@ -406,7 +406,7 @@ class Tourist implements Entity {
  * A pigeon or a gull: body, head (it pecks), and two wings that fold back along the flanks until
  * something with wheels arrives.
  */
-function bird(gull: boolean) {
+export function bird(gull: boolean) {
   return model(`bird|${gull}`, () => {
     const g = new THREE.Group();
     const coat = color(gull ? 0xf4f4f0 : 0x7d8590, 0.62), wingC = color(gull ? 0xa9b0b8 : 0x6a727d, 0.62);

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { G } from '../ctx';
 import { buildStreet, bayFacades, guideWalls, Reserved } from './Buildings';
 import * as SP from './SetPieces';
 import { scaffold } from '../props/Props';
@@ -82,6 +83,12 @@ export function buildRoyalMile(): Level {
   policeCar(574, -4.4, 0.4);
   arcadeCabinet(266, -6.7);
   arcadeCabinet(452, 6.6);
+
+  // more buskers working the Mile: mimes and pipers out by the kerb
+  G.crowd.tourist(150, 5.2, 'mime');
+  G.crowd.tourist(300, -5.0, 'piper');
+  G.crowd.tourist(410, -5.2, 'mime');
+  G.crowd.tourist(520, 5.0, 'piper');
 
   // extra scaffolding on a couple of ordinary lands
   scaffold(116, 124, -6.7, 6);

@@ -7,6 +7,7 @@ import { buildSeatedRider, Ragdoll, Runner, SeatedRider, seatKilt } from './Ride
 import { VEHICLES, VehicleId, VehicleParts, VehicleSpec } from './Vehicles';
 import { LOOK } from '../game/Cosmetics';
 import { color } from '../art/Materials';
+import { bird } from '../props/Crowd';
 
 const HOP_RECHARGE = 5;
 
@@ -32,6 +33,7 @@ export class Trolley implements Entity {
   rider!: SeatedRider;
   /** The polis light, if it's bolted on: the bar and its two lamps. */
   private siren: { group: THREE.Group; lamps: THREE.MeshStandardMaterial[] } | null = null;
+  private gull: THREE.Object3D | null = null;
   /** The bare vehicle's size (vehicle space), for bolting things on. */
   private bounds: THREE.Box3;
   ragdoll: Ragdoll | null = null;
@@ -44,6 +46,8 @@ export class Trolley implements Entity {
   ballastCol: RAPIER.Collider;
 
   ejected = false;
+  /** How many times he's been thrown out this run. */
+  ejectCount = 0;
   launched = false;
   steer = 0;
   hops = 1;
@@ -125,6 +129,22 @@ export class Trolley implements Entity {
     if (this.siren) {
       this.mesh.remove(this.siren.group);
       this.siren = null;
+    }
+    if (this.gull) {
+      this.mesh.remove(this.gull);
+      this.gull = null;
+    }
+    if (LOOK.vehicle === 'gull') {
+      // perched on the back rail, facing the way he's going, twice life size so it reads
+      const g = new THREE.Group();
+      const b = bird(true);
+      b.scale.setScalar(2.2);
+      b.position.y = 0.22;
+      g.add(b);
+      g.position.set(this.bounds.min.x + 0.12, this.bounds.max.y, 0.18);
+      g.traverse((o: any) => o.isMesh && (o.castShadow = true));
+      this.mesh.add(g);
+      this.gull = g;
     }
     if (LOOK.vehicle === 'siren') {
       // a light bar on a pole at the back, clear of his head
@@ -258,6 +278,7 @@ export class Trolley implements Entity {
   eject(reason: string) {
     if (this.ejected || G.time - this.boardedAt < 1.2) return;
     this.ejected = true;
+    this.ejectCount++;
     this.ejectedAt = G.time;
     this.getUpAt = G.time + 1.6;
     this.ragdoll?.dispose();
@@ -551,6 +572,11 @@ export class Trolley implements Entity {
       w.rotation.y = i < 2 ? -(this.vc.wheelSteering(i) ?? 0) : 0;
       const spin = w.getObjectByName('spin')!;
       spin.rotation.z = -(this.vc.wheelRotation(i) ?? 0);
+    }
+    if (this.gull) {
+      // hanging on, having a look about
+      this.gull.rotation.y = Math.sin(G.time * 1.3) * 0.5;
+      this.gull.rotation.z = Math.sin(G.time * 9) * 0.04 * Math.min(1, this.speed / 8);
     }
     if (this.siren) {
       // flashing away, in complete silence

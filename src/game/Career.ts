@@ -1,5 +1,5 @@
 import type { VehicleId } from '../vehicle/Vehicles';
-import { Cosmetic, COSMETICS, freshTally, LOOK, RunTally, Slot, Tally } from './Cosmetics';
+import { Cosmetic, COSMETICS, CROWD_KEYS, freshTally, LOOK, RunTally, Slot, Tally } from './Cosmetics';
 
 /**
  * Persistent progress, kept in localStorage: the career points bank, best scores, which stretch of
@@ -128,6 +128,11 @@ export class Career {
     d.equip = { ...LOOK };
   }
 
+  /** The kit bag and its side objectives open the first time he ends up in the Forth. */
+  get kitOpen() {
+    return this.data.splashes > 0;
+  }
+
   /** Wear something (or pass null to take the slot back to normal). */
   equip(slot: Slot, id: string | null) {
     if (id && !this.data.cosmetics.includes(id)) return;
@@ -173,6 +178,7 @@ export class Career {
     const prevBest = d.best[run.tier] ?? 0;
     const record = run.score > prevBest;
     if (record) d.best[run.tier] = run.score;
+    const wasOpen = this.kitOpen;
     if (run.splash) d.splashes++;
     const newly: Goal[] = [];
     // goals unlock in order; one run can tick off several
@@ -184,14 +190,19 @@ export class Career {
       newly.push(g);
     }
     // side objectives: any order, and they keep counting whatever stage you're on
+    // (nothing counts until the kit bag is open; the run that opens it does)
     const extras: Cosmetic[] = [];
-    if (run.tally) {
+    if (run.tally && this.kitOpen) {
       const t = d.tally;
-      for (const k of ['wizard', 'hearts', 'hibs', 'marcher'] as const) t[k] += run.tally.downs[k] ?? 0;
+      for (const k of CROWD_KEYS) t[k] += run.tally.downs[k] ?? 0;
       const [hit, total] = run.tally.police;
       if (total > 0 && hit >= total) t.cleanSweeps++;
+      if (run.tally.clean) t.clean++;
+      if (run.tally.splash) t.splashes++;
+      t.ejects += run.tally.ejects;
+      t.flocks += run.tally.flocks;
     }
-    for (const c of COSMETICS) {
+    for (const c of this.kitOpen ? COSMETICS : []) {
       if (d.cosmetics.includes(c.id)) continue;
       const [cur, max] = c.progress(d.tally);
       if (cur < max) continue;
@@ -199,7 +210,7 @@ export class Career {
       extras.push(c);
     }
     this.save();
-    return { newly, record, prevBest, extras };
+    return { newly, record, prevBest, extras, kitOpened: !wasOpen && this.kitOpen };
   }
 
   reset() {
