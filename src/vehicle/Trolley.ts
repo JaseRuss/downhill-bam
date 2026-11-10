@@ -121,7 +121,7 @@ export class Trolley implements Entity {
     // smashing through breakable things shouldn't throw Hamish out; walls and landmarks will
     const o: any = (other as any)?.opts;
     const breakable = other?.kind === 'part' && o && ((o.release !== undefined && o.release < 1000) || o.fracture || o.dynamic);
-    const limit = (breakable || other?.kind === 'tourist' || other?.kind === 'debris' ? 1600 : 560) * this.spec.grip;
+    const limit = (breakable || other?.kind === 'tourist' || other?.kind === 'debris' ? 1400 : 490) * this.spec.grip;
     if (!this.ejected && this.launched && load > limit) this.eject('crash');
   }
 
@@ -473,7 +473,7 @@ export class Trolley implements Entity {
     if (this.launched && !this.ejected) {
       if (this.upDir.y < 0.25) this.flippedTime += h;
       else this.flippedTime = 0;
-      if (this.flippedTime > 0.6) this.eject('flip');
+      if (this.flippedTime > 0.5) this.eject('flip');
     }
   }
 
