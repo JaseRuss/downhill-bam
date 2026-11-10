@@ -248,7 +248,7 @@ export class Sfx {
   /** Pull-cord, two coughs, then it catches. */
   engineStart(kind: string) {
     if (!this.ctx) return;
-    const base = kind === 'blower' ? 1.6 : kind === 'outboard' ? 1.25 : kind === 'buggy' ? 0.75 : 1;
+    const base = kind === 'blower' ? 1.6 : kind === 'gritter' ? 0.5 : kind === 'buggy' ? 0.75 : 1;
     this.burst(0.35, 'bandpass', 900, 2, 0.25, 0.01, 300);
     this.tone('sawtooth', 70 * base, 40 * base, 0.18, 0.22, 0.45);
     this.tone('sawtooth', 75 * base, 38 * base, 0.18, 0.22, 0.8);

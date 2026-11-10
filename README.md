@@ -49,10 +49,10 @@ There's no route select: the course always follows the same progression, and eac
 
 | Goal | Unlocks |
 | --- | --- |
-| Score 10,000 in one run | Stage 2 — the Grassmarket Diversion · Leaf-Blower Trolley |
-| Bank 50,000 career points | Stage 3 — Up to Princes Street · Granny McLeod's Mobility Scooter |
+| Score 5,000 in one run | Stage 2 — the Grassmarket Diversion · Leaf-Blower Trolley |
+| Bank 25,000 career points | Stage 3 — Up to Princes Street · Granny McLeod's Mobility Scooter |
 | Reach the East End of Princes Street | Stage 4 — Leith Walk & the Shore · Golf Buggy |
-| Drive off Starbank Road into the Forth | Clawfoot Bathtub |
+| Drive off Starbank Road into the Forth | Sir Saltalot, the council gritter: seven tonnes, a snowplough, the fastest thing in the garage |
 
 From stage 2 the Royal Mile is shut at the George IV Bridge junction and you follow the diversion: Victoria Street → the Grassmarket → King's Stables Road → Lothian Road → Princes Street → Leith Street → Leith Walk → Great Junction Street → Starbank Road → off the slipway into the sea. Side streets are barriered off, and each stage ends at a ROAD CLOSED hoarding.
 

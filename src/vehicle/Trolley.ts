@@ -90,6 +90,8 @@ export class Trolley implements Entity {
       this.vc.setWheelSuspensionCompression(i, 2.2);
       this.vc.setWheelSuspensionRelaxation(i, 1.7);
       this.vc.setWheelMaxSuspensionTravel(i, spec.travel);
+      // the default cap on spring force bottoms out anything heavier than a golf buggy
+      this.vc.setWheelMaxSuspensionForce(i, Math.max(6000, this.mass * 9.81 * 3));
       this.vc.setWheelFrictionSlip(i, 1.6);
       this.vc.setWheelSideFrictionStiffness(i, 0.9);
     });

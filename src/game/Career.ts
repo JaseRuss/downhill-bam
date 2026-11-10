@@ -45,21 +45,21 @@ const best = (d: CareerData) => Math.max(0, ...Object.values(d.best));
 export const GOALS: Goal[] = [
   {
     id: 'grassmarket',
-    title: 'Score 10,000 in one run',
+    title: 'Score 5,000 in one run',
     reward: 'The Grassmarket Diversion + the Leaf-Blower Trolley',
     tier: 2,
     vehicle: 'blower',
-    progress: (d, r) => [Math.max(best(d), r?.score ?? 0), 10000],
-    done: (d, r) => Math.max(best(d), r?.score ?? 0) >= 10000,
+    progress: (d, r) => [Math.max(best(d), r?.score ?? 0), 5000],
+    done: (d, r) => Math.max(best(d), r?.score ?? 0) >= 5000,
   },
   {
     id: 'princes',
-    title: 'Bank 50,000 career points',
+    title: 'Bank 25,000 career points',
     reward: "Up to Princes Street + Granny McLeod's Mobility Scooter",
     tier: 3,
     vehicle: 'scooter',
-    progress: (d) => [d.bank, 50000],
-    done: (d) => d.bank >= 50000,
+    progress: (d) => [d.bank, 25000],
+    done: (d) => d.bank >= 25000,
   },
   {
     id: 'leith',
@@ -73,17 +73,17 @@ export const GOALS: Goal[] = [
   {
     id: 'forth',
     title: 'Drive off Starbank Road into the Forth',
-    reward: 'The Clawfoot Bathtub',
-    vehicle: 'bathtub',
+    reward: 'Sir Saltalot, the Council Gritter',
+    vehicle: 'gritter',
     progress: (d, r) => [d.splashes + (r?.splash ? 1 : 0) > 0 ? 1 : 0, 1],
     done: (d, r) => d.splashes > 0 || !!r?.splash,
   },
   {
     id: 'bigrun',
-    title: 'Score 60,000 in one run',
+    title: 'Score 30,000 in one run',
     reward: 'Bragging rights (and a gold-plated invoice)',
-    progress: (d, r) => [Math.max(best(d), r?.score ?? 0), 60000],
-    done: (d, r) => Math.max(best(d), r?.score ?? 0) >= 60000,
+    progress: (d, r) => [Math.max(best(d), r?.score ?? 0), 30000],
+    done: (d, r) => Math.max(best(d), r?.score ?? 0) >= 30000,
   },
 ];
 
@@ -107,6 +107,10 @@ export class Career {
         if (old) this.data.best[1] = old;
       }
     } catch {}
+    // the bathtub was retired: anyone who'd earned it gets the gritter
+    const old = this.data.vehicles as string[];
+    if (old.includes('bathtub')) this.data.vehicles = [...old.filter((v) => v !== 'bathtub'), 'gritter'] as VehicleId[];
+    if ((this.data.vehicle as string) === 'bathtub') this.data.vehicle = 'gritter';
     if (!this.data.vehicles.includes(this.data.vehicle)) this.data.vehicle = 'trolley';
   }
 
