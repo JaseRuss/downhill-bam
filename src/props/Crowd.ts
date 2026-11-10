@@ -219,11 +219,13 @@ class Tourist implements Entity {
       return;
     }
     if (this.role !== 'walker') return;
-    const { u } = toRoad(t.x, t.z);
+    const { s, u } = toRoad(t.x, t.z);
     if (u > this.walkU[1]) this.walkDir = -1;
     else if (u < this.walkU[0]) this.walkDir = 1;
     const R = right(this.walkS).multiplyScalar(this.walkDir);
-    this.body.setLinvel({ x: R.x * 0.75, y: v.y, z: R.z * 0.75 }, true);
+    // nudged out of line? shuffle back into single file
+    const F = forward(this.walkS).multiplyScalar(Math.max(-0.6, Math.min(0.6, (this.walkS - s) * 2)));
+    this.body.setLinvel({ x: R.x * 0.75 + F.x, y: v.y, z: R.z * 0.75 + F.z }, true);
     this.faceYaw = Math.atan2(-R.z, R.x);
   }
 
@@ -320,7 +322,11 @@ class Tourist implements Entity {
     this.role = role;
     this.walkS = s;
     this.walkU = [Math.min(uA, uB), Math.max(uA, uB)];
-    this.walkDir = Math.random() < 0.5 ? 1 : -1;
+    this.walkDir = 1; // the whole file sets off the same way
+    this.seed = 0; // and in step
+    this.bob = 0;
+    // marchers walk through each other, so the file can double back on itself without jamming
+    this.body.collider(0).setCollisionGroups((0x0002 << 16) | 0xfffd);
     this.lodOff = true; // they move and animate: no frozen far-away model
     if (role === 'floater') {
       // drifting down from on high under a brolly

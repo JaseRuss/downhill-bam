@@ -227,17 +227,21 @@ export function arcadeCabinet(s: number, u: number) {
 
 // ------------------------------------------------------------------ the wee marchers
 /**
- * A troupe of wee marchers crossing the street at s: walkers going back and forth between the
- * kerbs, one blocker in the middle, one floating down on an umbrella. Flatten the lot for a bonus.
+ * A troupe of wee marchers crossing the street at s: walkers nose to tail in single file, pacing
+ * from one kerb to a blocker at the other and back, and one floating down on an umbrella to join
+ * the end of the queue. Flatten the lot for a bonus.
  */
 export function marchers(s: number, n = 8) {
+  const GAP = 0.6; // nose to tail
   const uA = -edgeL(s) + 1.2, uB = edgeR(s) - 1.2;
+  const turn = uB - 0.55; // where the blocker sends them back
   const troupe: { scored: boolean }[] = [];
   for (let i = 0; i < n; i++) {
-    const u = uA + ((uB - uA) * (i + 0.5)) / n;
-    const role = i === Math.floor(n / 2) ? 'blocker' : i === n - 1 ? 'floater' : 'walker';
-    const t = G.crowd.tourist(s + (Math.random() - 0.5) * 1.2, role === 'blocker' ? 0.3 : u, 'marcher', role === 'floater' ? 7 : 0, 'Wee Marcher', 100);
-    t.march(role, s, uA, uB);
+    const role = i === n - 2 ? 'blocker' : i === n - 1 ? 'floater' : 'walker';
+    // the floater comes down just behind the tail of the file
+    const u = role === 'blocker' ? uB : role === 'floater' ? uA : Math.min(turn, uA + (i + 1) * GAP);
+    const t = G.crowd.tourist(s, u, 'marcher', role === 'floater' ? 7 : 0, 'Wee Marcher', 100);
+    t.march(role, s, uA, turn);
     troupe.push(t);
   }
   let saidAll = false;
