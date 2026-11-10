@@ -13,6 +13,8 @@ import * as P from './props/Props';
 import * as Hm from './props/Homages';
 import * as Mo from './art/Motors';
 import * as LM from './art/Landmarks';
+import * as LM2 from './art/Landmarks2';
+import { M } from './art/Materials';
 import * as B from './level/Buildings';
 import { initInteriors } from './art/Interiors';
 
@@ -192,6 +194,84 @@ const MODELS: Record<string, () => void> = {
   scott: () => {
     big(50);
     put(LM.scottMonumentModel());
+  },
+  mercat: () => {
+    big(10);
+    put(LM2.mercatDrumModel(), 0, 1.3, 0);
+    for (let i = 0; i < 4; i++) put(LM2.mercatShaftModel(), 0, 2.6 + 0.85 + i * 1.7, 0);
+    put(LM2.mercatCapitalModel(), 0, 9.6, 0);
+    put(LM2.unicornModel(), 0, 10.4, 0, Math.PI / 2);
+  },
+  tron: () => {
+    big(50);
+    put(LM2.tronKirkModel(32, 15), 0, 0, 0, Math.PI);
+  },
+  tolbooth: () => {
+    big(30);
+    put(LM2.tolboothModel(13));
+    put(LM2.tolboothClockModel(), 8, 4, -8, Math.PI / 2);
+  },
+  holyrood: () => {
+    big(40);
+    put(LM2.palaceModel(), 0, 0, 0, -Math.PI / 2);
+  },
+  gates: () => {
+    big(14);
+    put(LM2.gatePostModel(), 0, 1.9, -3.75);
+    put(LM2.gatePostModel(), 0, 1.9, 3.75);
+    put(LM2.gateLeafModel(), 0, 1.55, -1.66, Math.PI / 2);
+    put(LM2.gateLeafModel(), 0, 1.55, 1.66, Math.PI / 2);
+    put(LM2.sideRailingModel(), 0, 0, 6.1, Math.PI / 2);
+    put(LM2.forecourtWallModel(20), -8, 1, 0);
+    put(LM2.fountainBasinModel(), 8, 0, 0);
+    put(LM2.fountainStemModel(), 8, 1.6, 0);
+    put(LM2.fountainBowlModel(), 8, 2.75, 0);
+    put(LM2.fountainCrownModel(), 8, 3.2, 0);
+  },
+  stall: () => {
+    big(8);
+    put(LM2.stallCanopyModel(M.stripes('#c4161c', '#f4ecd8')), 0, 2.38, 0);
+    put(LM2.stallCounterModel(), 0, 0.48, 0);
+  },
+  caley: () => {
+    big(40);
+    put(LM2.caledonianModel(), 0, 0, 0, Math.PI);
+  },
+  balmoral: () => {
+    big(60);
+    put(LM2.balmoralModel());
+  },
+  whip: () => {
+    big(50);
+    put(LM2.walnutWhipModel());
+  },
+  wheel: () => {
+    big(20);
+    const w = LM2.bigWheelModel(8.5);
+    w.rotation.z = Math.PI / 2;
+    w.position.y = 9.4;
+    stage.add(w);
+  },
+  lighthouse: () => {
+    big(25);
+    put(LM2.lighthouseModel(), 0, -2, 0, -Math.PI / 2);
+  },
+  train: () => {
+    big(30);
+    put(LM2.trainCarModel(false), 0, 0, -10.5);
+    put(LM2.trainCarModel(true), 0, 0, 10.5);
+  },
+  ross: () => {
+    big(12);
+    put(LM2.rossFountainModel());
+  },
+  gallery: () => {
+    big(30);
+    put(LM2.galleryModel(15));
+  },
+  keep: () => {
+    big(60);
+    put(LM.castleKeepModel(), 0, -5, 20, Math.PI / 2);
   },
   tenements: () => {
     big(40);

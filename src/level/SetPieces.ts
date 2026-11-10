@@ -11,6 +11,7 @@ import type { Part } from '../destruction/Destruction';
 import { buildHuman } from '../art/Humanoid';
 import { cyl as mcyl, lathe, loft, model, Parts, q as mq, rbox } from '../art/Model';
 import * as LM from '../art/Landmarks';
+import * as LM2 from '../art/Landmarks2';
 
 // ---------- helpers ----------
 function bx(w: number, h: number, d: number, mat: THREE.Material | THREE.Material[], x = 0, y = 0, z = 0) {
@@ -471,17 +472,7 @@ export function adamSmith(s: number, u: number) {
 // =====================================================================
 export function mercatCross(s: number, u: number) {
   const stone = M.stone(36, 54, 31, 3, 1);
-  const dg = new THREE.Group();
-  const drum = cyl(2.0, 2.0, 2.6, stone, 0, 0, 0, 8);
-  dg.add(drum);
-  dg.add(cyl(2.15, 2.15, 0.25, M.stone(36, 60, 2), 0, 1.35, 0, 8));
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
-    const medal = new THREE.Mesh(new THREE.CircleGeometry(0.42, 16), color([0xc4161c, 0x1b4f9c, 0xd8a93a, 0x2b8a3e][i % 4], 0.5));
-    medal.position.set(Math.cos(a) * 1.86, 0.3, Math.sin(a) * 1.86);
-    medal.lookAt(Math.cos(a) * 5, 0.3, Math.sin(a) * 5);
-    dg.add(medal);
-  }
+  const dg = LM2.mercatDrumModel();
   const column: Part[] = [];
   const trigger = once(() => {
     const dir = right(s).multiplyScalar(-Math.sign(u)).add(forward(s).multiplyScalar(0.4)).normalize();
@@ -504,29 +495,13 @@ export function mercatCross(s: number, u: number) {
   let y = 2.6;
   const colMat = M.stone(36, 60, 32);
   for (let i = 0; i < 4; i++) {
-    column.push(G.destruction.add(toWorld(s, u, y + 0.85), 0, [0.28, 0.85, 0.28], { shape: 'cyl', mat: colMat, density: 900, release: 9999, sound: 'stone', fracture: [1, 2, 1], fractureLoad: 500 }));
+    column.push(G.destruction.add(toWorld(s, u, y + 0.85), 0, [0.28, 0.85, 0.28], { shape: 'cyl', visual: LM2.mercatShaftModel(), pieceMat: colMat, density: 900, release: 9999, sound: 'stone', fracture: [1, 2, 1], fractureLoad: 500 }));
     y += 1.7;
   }
-  column.push(G.destruction.add(toWorld(s, u, y + 0.2), theta(s), [0.45, 0.2, 0.45], { mat: M.stone(36, 64, 33), density: 900, release: 9999, sound: 'stone' }));
+  column.push(G.destruction.add(toWorld(s, u, y + 0.2), theta(s), [0.45, 0.2, 0.45], { visual: LM2.mercatCapitalModel(), density: 900, release: 9999, sound: 'stone' }));
   y += 0.4;
   // the unicorn, rampant, holding a saltire shield
-  const ug = new THREE.Group();
-  const white = M.white();
-  const body = bx(0.32, 0.38, 0.8, white, 0, 0.1, 0);
-  body.rotation.x = -0.9;
-  ug.add(body);
-  const neck = bx(0.2, 0.5, 0.22, white, 0, 0.55, 0.25);
-  neck.rotation.x = 0.3;
-  ug.add(neck);
-  ug.add(bx(0.22, 0.24, 0.42, white, 0, 0.85, 0.42));
-  ug.add(cone(0.04, 0.45, M.gold(), 0, 1.05, 0.62, 8));
-  ug.children[ug.children.length - 1].rotation.x = 1.0;
-  for (const x of [-0.12, 0.12]) ug.add(bx(0.08, 0.5, 0.08, white, x, -0.35, -0.2));
-  const shield = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.6, 0.5), [white, white, white, white, mapMat(saltireTex()), white]);
-  shield.position.set(0, 0.25, 0.42);
-  shield.rotation.y = Math.PI / 2;
-  ug.add(shield);
-  ug.add(bx(0.06, 0.06, 0.45, M.gold(), 0, 0.88, 0.1)); // golden mane
+  const ug = LM2.unicornModel();
   const unicorn = G.destruction.add(toWorld(s, u, y + 0.6), q(s, -Math.PI / 2 * Math.sign(u)), [0.3, 0.6, 0.45], {
     visual: ug, density: 400, release: 9999, points: 2500, label: 'Mercat Cross', sound: 'stone',
   });
@@ -666,10 +641,10 @@ function stall(s: number, u: number, kind: 'haggis' | 'scarf' | 'fudge', title: 
     posts.push(G.destruction.add(off(x, 1.15, z), qy, [0.04, 1.15, 0.04], { shape: 'cyl', mat: M.wood(28, 30, 2), density: 700, release: 12, sound: 'wood', points: 30, label: 'Market Stall' }));
   }
   const canopy = G.destruction.add(off(0, 2.38, 0), qy, [0.85, 0.06, 1.05], {
-    mat: M.stripes(stripe[0], stripe[1]), density: 200, release: 40, supports: posts, sound: 'soft', points: 60, label: 'Market Stall',
+    visual: LM2.stallCanopyModel(M.stripes(stripe[0], stripe[1])), pieceMat: M.stripes(stripe[0], stripe[1]), density: 200, release: 40, supports: posts, sound: 'soft', points: 60, label: 'Market Stall',
   });
   const counter = G.destruction.add(off(0, 0.48, 0), qy, [0.62, 0.45, 0.85], {
-    mat: M.wood(30, 36, 7), density: 250, release: 25, fracture: [2, 2, 3], fractureLoad: 120, sound: 'wood', points: 80, label: 'Market Stall', retain: 0.85,
+    visual: LM2.stallCounterModel(), pieceMat: M.wood(30, 36, 7), density: 250, release: 25, fracture: [2, 2, 3], fractureLoad: 120, sound: 'wood', points: 80, label: 'Market Stall', retain: 0.85,
   });
   // sign
   const sg = new THREE.Group();
@@ -739,29 +714,7 @@ export function tronKirk() {
   g.position.y = ground;
   const top = baseH(sA) - ground + 14;
   const len = sB - sA;
-  g.add(bx(12, top, len, stone, 0, top / 2, 0));
-  const roof = bx(12 / Math.SQRT2, 12 / Math.SQRT2, len, M.slate(), 0, top, 0);
-  roof.rotation.z = Math.PI / 4;
-  g.add(roof);
-  // tall arched windows facing the street (-X local = +u = street for left side)
-  for (let z = -len / 2 + 3; z < len / 2 - 2; z += 4) {
-    if (Math.abs(z) < 4) continue;
-    g.add(bx(0.1, 6, 1.6, color(0x1e2a33, 0.2, 0.4), -6.02, top * 0.55, z));
-    g.add(cyl(0.8, 0.8, 0.1, color(0x1e2a33, 0.2, 0.4), -6.02, top * 0.55 + 3, z, 12).rotateZ(Math.PI / 2));
-  }
-  // tower + steeple + clock
-  const tw = new THREE.Group();
-  tw.add(bx(5.5, 26, 5.5, stone, 0, 13, 0));
-  tw.add(cyl(1.6, 2.6, 6, stone, 0, 29, 0, 8));
-  tw.add(cone(1.6, 14, color(0x2f3a45, 0.6, 0.3), 0, 39, 0, 8));
-  tw.add(new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 6), M.gold()));
-  tw.children[3].position.y = 46.2;
-  const cf = new THREE.Mesh(new THREE.CircleGeometry(1.0, 24), mapMat(clockTex()));
-  cf.position.set(-2.78, 21, 0);
-  cf.rotation.y = -Math.PI / 2;
-  tw.add(cf);
-  tw.position.set(-3.25, 0, 0); // flush with the building line
-  g.add(tw);
+  g.add(LM2.tronKirkModel(len, top));
   add(g);
   staticBox((sA + sB) / 2, -(HALF_STREET + 6), ground + top / 2, 6, top / 2, len / 2);
   staticBox((sA + sB) / 2, -10.35, ground + 13, 2.75, 13, 2.75);
@@ -849,21 +802,7 @@ export function tolbooth(s: number) {
   const ground = baseH(s + 10) - 0.5;
   g.position.y = ground;
   const top = baseH(s - 10) - ground + 12;
-  g.add(bx(10, top, 20, stone, 0, top / 2, 0));
-  const roof = bx(10 / Math.SQRT2, 10 / Math.SQRT2, 20, M.slate(), 0, top, 0);
-  roof.rotation.z = Math.PI / 4;
-  g.add(roof);
-  // the tower, poking out into the pavement
-  const tw = new THREE.Group();
-  tw.add(bx(4, 20, 6, stone, 0, 10, 0));
-  for (const z of [-2.6, 2.6]) {
-    tw.add(cyl(0.9, 0.9, 3, stone, 2.2, 18, z, 12));
-    tw.add(cone(1.0, 2.6, M.slate(), 2.2, 20.8, z, 12));
-  }
-  tw.add(cone(2.2, 7, M.slate(), 0, 23.5, 0, 4));
-  for (let k = 0; k < 4; k++) tw.add(bx(0.1, 1.4, 0.8, color(0x1e2a33, 0.2, 0.4), 2.02, 4 + k * 3.5, 0));
-  tw.position.set(3.0, 0, -4); // flush with the building line
-  g.add(tw);
+  g.add(LM2.tolboothModel(top));
   add(g);
   staticBox(s, front + 5, ground + top / 2, 5, top / 2, 10);
   // the overhanging clock
@@ -873,11 +812,7 @@ export function tolbooth(s: number) {
   const bracket = G.destruction.add(toWorldAbs(cs, (cu + front) / 2, yC + 0.85, new THREE.Vector3()), theta(cs), [(front - cu) / 2, 0.06, 0.06], {
     mat: M.black(), density: 3000, release: 25, sound: 'metal',
   });
-  const face = mapMat(clockTex());
-  const cv = new THREE.Group();
-  cv.add(bx(1.3, 1.3, 0.36, [M.gold(), M.gold(), M.gold(), M.gold(), face, face]));
-  cv.add(new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 8), M.gold()));
-  cv.children[1].position.y = 0.8;
+  const cv = LM2.tolboothClockModel();
   G.destruction.add(toWorldAbs(cs, cu, yC, new THREE.Vector3()), theta(cs), [0.65, 0.65, 0.18], {
     visual: cv, density: 700, release: 3, fracture: [2, 2, 1], fractureLoad: 140, supports: [bracket], points: 2000, label: 'Tolbooth Clock', sound: 'metal',
     onRelease: () => {
@@ -900,44 +835,24 @@ export function holyrood() {
     const sc = 609;
     const g = roadGroup(sc, side * 8.2, 0);
     g.position.y = baseH(sc) - 0.3;
-    g.add(bx(0.6, 2.4, 82, stone, 0, 0.2, 0));
-    for (let z = -41; z < 41; z += 0.35) g.add(bx(0.03, 1.6, 0.03, M.black(), 0, 2.2, z));
-    g.add(bx(0.05, 0.05, 82, M.black(), 0, 3.0, 0));
+    g.add(LM2.forecourtWallModel(82));
     add(g);
     staticBox(sc, side * 8.2, baseH(sc) + 1.2, 0.3, 2.4, 41);
   }
   // gate posts and fixed railings either side of the gates
   const posts: Part[] = [];
   for (const side of [-1, 1]) {
-    const v = new THREE.Group();
-    v.add(bx(0.9, 3.8, 0.9, stone));
-    v.add(bx(1.1, 0.25, 1.1, M.stone(36, 60, 82), 0, 2.0, 0));
-    v.add(new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 8), M.gold()));
-    v.children[2].position.y = 2.5;
+    const v = LM2.gatePostModel();
     posts.push(G.destruction.add(toWorld(sG, side * 3.75, 1.9), theta(sG), [0.45, 1.9, 0.45], { visual: v, density: 2400, sound: 'stone' }));
     const rg = roadGroup(sG, side * 6.1, 0);
-    for (let x = -1.8; x <= 1.8; x += 0.2) rg.add(bx(0.03, 2.2, 0.03, M.black(), x, 1.1, 0));
-    rg.add(bx(3.9, 0.05, 0.05, M.black(), 0, 2.1, 0));
-    rg.add(bx(3.9, 0.05, 0.05, M.black(), 0, 0.3, 0));
+    rg.add(LM2.sideRailingModel());
     add(rg);
     staticBox(sG, side * 6.1, baseH(sG) + 1.1, 1.95, 1.1, 0.05);
   }
   // the gates themselves: dynamic leaves on hinges
   let opened = 0;
   for (const side of [-1, 1]) {
-    const v = new THREE.Group();
-    for (let x = -1.55; x <= 1.55; x += 0.16) {
-      v.add(bx(0.03, 2.8, 0.03, M.black(), x, 0, 0));
-      v.add(cone(0.04, 0.14, M.gold(), x, 1.47, 0, 6));
-    }
-    for (const y of [-1.2, 0, 1.2]) v.add(bx(3.2, 0.06, 0.05, M.black(), 0, y, 0));
-    const crest = new THREE.Mesh(new THREE.CircleGeometry(0.42, 20), M.gold());
-    crest.position.set(0, 0.6, 0.04);
-    v.add(crest);
-    const crest2 = crest.clone();
-    crest2.position.z = -0.04;
-    crest2.rotation.y = Math.PI;
-    v.add(crest2);
+    const v = LM2.gateLeafModel();
     const uLeaf = side * 1.66;
     const leaf = G.destruction.add(toWorld(sG, uLeaf, 1.55), theta(sG), [1.6, 1.4, 0.04], {
       visual: v, dynamic: true, density: 70, points: 1500, label: 'Palace Gates', sound: 'metal', hitLoad: 6,
@@ -972,39 +887,23 @@ export function holyrood() {
   // fountain in the forecourt
   const fs = 614;
   const fg = roadGroup(fs, 0, 0);
-  fg.add(cyl(2.6, 2.8, 0.7, stone, 0, 0.35, 0, 8));
+  fg.add(LM2.fountainBasinModel());
   const water = new THREE.Mesh(new THREE.CircleGeometry(2.4, 24), new THREE.MeshStandardMaterial({ color: 0x5f8fa8, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.8 }));
   water.rotation.x = -Math.PI / 2;
   water.position.y = 0.6;
   fg.add(water);
   add(fg);
   staticBox(fs, 0, baseH(fs) + 0.35, 2.6, 0.35, 2.6);
-  const tier1 = G.destruction.add(toWorld(fs, 0, 1.6), 0, [0.35, 1.0, 0.35], { shape: 'cyl', mat: stone, density: 1200, release: 25, points: 300, label: 'Fountain', sound: 'stone', fracture: [1, 3, 1], fractureLoad: 300 });
-  const bowl = G.destruction.add(toWorld(fs, 0, 2.75), 0, [1.2, 0.15, 1.2], { shape: 'cyl', mat: M.stone(36, 60, 83), density: 600, release: 40, supports: [tier1], points: 300, label: 'Fountain', sound: 'stone' });
-  const crownV = new THREE.Group();
-  crownV.add(cyl(0.3, 0.3, 0.5, M.gold()));
-  for (let i = 0; i < 6; i++) crownV.add(cone(0.08, 0.3, M.gold(), Math.cos(i) * 0.25, 0.4, Math.sin(i) * 0.25, 6));
+  const tier1 = G.destruction.add(toWorld(fs, 0, 1.6), 0, [0.35, 1.0, 0.35], { shape: 'cyl', visual: LM2.fountainStemModel(), pieceMat: stone, density: 1200, release: 25, points: 300, label: 'Fountain', sound: 'stone', fracture: [1, 3, 1], fractureLoad: 300 });
+  const bowl = G.destruction.add(toWorld(fs, 0, 2.75), 0, [1.2, 0.15, 1.2], { shape: 'cyl', visual: LM2.fountainBowlModel(), density: 600, release: 40, supports: [tier1], points: 300, label: 'Fountain', sound: 'stone' });
+  const crownV = LM2.fountainCrownModel();
   G.destruction.add(toWorld(fs, 0, 3.2), 0, [0.3, 0.25, 0.3], { shape: 'cyl', visual: crownV, density: 600, release: 20, supports: [bowl], points: 500, label: 'Fountain', sound: 'metal' });
 
   // the palace
   const ps = 646;
   const pg = roadGroup(ps, 0, 0);
   pg.position.y = baseH(ps) - 0.4;
-  pg.add(bx(44, 16, 14, M.stone(36, 50, 84, 6, 2), 0, 8, 7));
-  crenellate(pg, 0, 16.4, -22, 22, 0.6, M.stone(36, 50, 85), true);
-  for (const x of [-14, 14]) {
-    pg.add(cyl(4, 4, 20, M.stone(36, 46, 86, 2, 2), x, 10, 0, 20));
-    pg.add(cone(4.6, 6, M.slate(), x, 23, 0, 20));
-  }
-  // windows
-  for (let x = -20; x <= 20; x += 3) {
-    if (Math.abs(x) > 10 && Math.abs(x) < 18) continue;
-    for (const y of [4, 8.5, 12.5]) pg.add(bx(1.2, 2, 0.2, color(0x2a3540, 0.2, 0.4), x, y, -0.05));
-  }
-  // entrance with columns
-  pg.add(bx(5, 7, 0.4, M.black(), 0, 3.5, -0.1));
-  for (const x of [-3, 3]) pg.add(cyl(0.4, 0.4, 7.5, M.stone(36, 62, 87), x, 3.75, -0.6, 12));
-  pg.add(cyl(0.08, 0.1, 7, M.white(), 0, 19.5, 6));
+  pg.add(LM2.palaceModel());
   const flag = new THREE.Mesh(new THREE.PlaneGeometry(3, 1.9), new THREE.MeshStandardMaterial({ map: saltireTex(), side: THREE.DoubleSide }));
   flag.position.set(1.55, 22, 6);
   pg.add(flag);

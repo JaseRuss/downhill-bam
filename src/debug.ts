@@ -143,6 +143,20 @@ export function installDebug(game: any) {
       // the merged static scenery (buildings, landmarks) on its own
       if (o.userData.batch) { sMeshes++; sTris += n; sBytes += b; }
     });
+    // painted textures in use: every distinct image behind a material in the scene
+    const images = new Map<string, number>();
+    scene.traverse((o: any) => {
+      if (!o.isMesh) return;
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+        for (const k of ['map', 'emissiveMap']) {
+          const t = m?.[k];
+          const img = t?.source?.data;
+          if (img?.width) images.set(t.source.uuid, img.width * img.height * 4 * (t.generateMipmaps ? 4 / 3 : 1));
+        }
+      }
+    });
+    let texBytes = 0;
+    for (const b of images.values()) texBytes += b;
     const cam = G.camera.clone();
     const views: string[] = [];
     let calls = 0, drawn = 0, worst = 0;
@@ -159,6 +173,7 @@ export function installDebug(game: any) {
     return {
       course: Road.COURSE, tier: game.tier, meshes, sceneTris: Math.round(tris), geometries: r.info.memory.geometries, textures: r.info.memory.textures,
       geometryMB: +(bytes / 1048576).toFixed(1),
+      images: images.size, imageMB: +(texBytes / 1048576).toFixed(1),
       staticMeshes: sMeshes, staticTris: Math.round(sTris), staticMB: +(sBytes / 1048576).toFixed(1), avgCalls: Math.round(calls / points), worstCalls: worst, avgDrawnTris: Math.round(drawn / points), views,
     };
   };

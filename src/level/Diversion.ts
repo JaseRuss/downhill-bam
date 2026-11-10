@@ -22,6 +22,9 @@ import { skooshCan } from '../props/Pickups';
 import { marchers, policeCar, policeBox, arcadeCabinet } from '../props/Homages';
 import { shopWindow } from '../art/Interiors';
 import * as LM from '../art/Landmarks';
+import * as LM2 from '../art/Landmarks2';
+import { Parts as MParts } from '../art/Model';
+import { UNIT, battlements, moulding, roof as aroof, sbox } from '../art/Architecture';
 
 /**
  * The long course: the Royal Mile is shut, so it's down George IV Bridge and Victoria Street to the
@@ -147,41 +150,34 @@ function scatterAlong(from: number, to: number, exclude: [number, number][], gul
 // the castle (it can't sit where the Royal Mile's rock does: King's Stables Road runs under it)
 // =====================================================================
 function castleHill() {
-  const rockMat = color(0x7a7165, 0.95);
-  const crag = new THREE.MeshStandardMaterial({ color: 0x7a7165, roughness: 0.95, flatShading: true });
-  const stone = M.stone(34, 46, 11, 4, 2);
-  const dark = M.stone(30, 34, 12, 2, 2);
+  const stone = M.stone(34, 46, 11);
   const g = roadGroup(-50, 0, 0);
   g.position.y = baseH(-50) - 0.5;
-  const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(30, 1), rockMat);
-  rock.scale.set(1.0, 0.8, 0.75);
+  const rock = LM.cragModel(0, 29, 23, 22);
   rock.position.set(12, -6, -22);
   g.add(rock);
-  g.add(bx(26, 14, 14, dark, 10, 12, -26));
-  g.add(bx(12, 10, 10, stone, 4, 22, -26));
-  g.add(bx(9, 8, 8, stone, 16, 20, -28));
-  crenellate(g, -19.5, 19.4, -3, 23, 1, stone, true);
+  const keep = LM.castleKeepModel(0.62);
+  keep.position.x = 10;
+  g.add(keep);
   add(g);
 
   // the cliff along King's Stables Road: crags rising from the pavement to the castle walls
   const s0 = MARKS.westport + 4, s1 = MARKS.lothian - 2;
   const r = rng(77);
-  for (let s = s0; s < s1 && on(s - 10); s += 7) {
+  let ci = 0;
+  for (let s = s0; s < s1 && on(s - 10); s += 7, ci++) {
     const e = edgeR(s);
     const k = Math.sin(((s - s0) / (s1 - s0)) * Math.PI);
     const R = 7 + r() * 4;
-    // crags stretched upwards only (spun about the vertical, so they never bulge into the street)
-    const m = new THREE.Mesh(new THREE.DodecahedronGeometry(R, 1), crag);
+    // crags stretched upwards only, and kept slim enough that their ledges never reach the street
+    const m = LM.cragModel(ci, R * 0.8, R * (1.3 + k * 1.6), R * 0.8, r() * 3);
     const p = toWorld(s, e + R * 1.05, 0);
     m.position.set(p.x, baseH(s) - 2 + R * (0.3 + k * 0.9), p.z);
-    m.scale.set(1, 1.3 + k * 1.6, 1);
-    m.rotation.y = r() * 3;
     add(m);
     // a higher tier of rock behind
-    const m2 = new THREE.Mesh(new THREE.DodecahedronGeometry(R * 1.3, 1), crag);
+    const m2 = LM.cragModel(ci + 1, R * 1.3, R * 1.3 * 1.4, R * 1.3, r() * 3);
     const p2 = toWorld(s, e + R * 2.2, 0);
     m2.position.set(p2.x, baseH(s) + 6 + k * 16, p2.z);
-    m2.scale.set(1, 1.4, 1);
     add(m2);
   }
   // castle curtain wall along the top of the crags
@@ -189,8 +185,11 @@ function castleHill() {
     const k = Math.sin(((s - s0) / (s1 - s0)) * Math.PI);
     const wg = roadGroup(s, edgeR(s) + 17, 0);
     wg.position.y = baseH(s) + 18 + k * 18;
-    wg.add(bx(3, 7, 10.4, stone, 0, 3.5, 0));
-    crenellate(wg, 0, 7.4, -5, 5, 3, stone);
+    const wp = new MParts();
+    wp.add(sbox(3, 7, 10.4), stone, [0, 3.5, 0]);
+    battlements(wp, stone, [1.2, 7, -5.2], [1.2, 7, 5.2], { h: 0.8, t: 0.6, w: 1.0, gap: 0.7 });
+    battlements(wp, stone, [-1.2, 7, -5.2], [-1.2, 7, 5.2], { h: 0.8, t: 0.6, w: 1.0, gap: 0.7 });
+    wp.build(wg);
     add(wg);
   }
   // low stone wall at the foot of the cliff
@@ -276,6 +275,14 @@ function victoriaStreet() {
     g.add(bx(0.06, 0.06, 6.3, M.black(), -2.25, 6.02, 0));
     // the buildings behind the terrace
     g.add(bx(8, 16, 6.3, M.stone(30, 40 + Math.floor(r() * 3) * 5, 3, 1, 2), 6.2, 8, 0));
+    // slates on the lands behind; pilasters and a cornice on the shop
+    const vp = new MParts();
+    vp.add(aroof(8.4, 3.2, 6.3, { ends: false }), M.slate(), [6.2, 16.2, 0]);
+    const trimC = color(new THREE.Color(tint).multiplyScalar(0.55).getHex(), 0.6);
+    for (const z of [-3.0, 3.0]) vp.add(UNIT, trimC, [-2.26, 2.4, z], null, [0.14, 4.8, 0.3]);
+    vp.add(moulding(6.3, 0.3, 0.22), trimC, [-2.2, 4.3, 0], null, [-1, 1, 1]);
+    vp.add(UNIT, trimC, [-2.25, 0.3, 0], null, [0.1, 0.6, 6.2]);
+    vp.build(g);
     add(g);
     staticBox(s + 3, -(e + 2.2), g.position.y + 4.95, 2.3, 0.15, 3.15);
   }
@@ -492,10 +499,7 @@ function caledonian() {
   const e = edgeL(s);
   const g = roadGroup(s, -(e + 6), 0);
   g.position.y = baseH(s) - 0.5;
-  const red = color(0xa4513b, 0.9);
-  g.add(cyl(4.2, 4.2, 26, red, 0, 13, 0, 16));
-  g.add(cone(4.8, 7, color(0x3f6b5a, 0.6, 0.4), 0, 29.5, 0, 16));
-  g.add(cyl(0.12, 0.12, 4, M.steel(), 0, 34, 0, 6));
+  g.add(LM2.caledonianModel());
   const sm = mapMat(signTex(['THE CALEDONIAN'], '#5a1420', '#f2c14e', 512, 80, 'Georgia'));
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(7, 1.1), sm);
   sign.position.set(-4.25, 9, 0);
@@ -611,33 +615,7 @@ function christmasMarket() {
   // the big wheel: a fixed part held up by two A-frames; knock a leg out and away it rolls
   const ws = mA + 50, wu = edgeR(ws) - 2.2;
   const R = 8.5;
-  const rv = new THREE.Group();
-  const white = color(0xf2efe8, 0.4, 0.5);
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(R, 0.18, 8, 48), white);
-  ring.rotation.x = Math.PI / 2;
-  rv.add(ring);
-  const ring2 = ring.clone();
-  ring2.scale.setScalar(0.94);
-  rv.add(ring2);
-  for (let i = 0; i < 16; i++) {
-    const a = (i / 16) * Math.PI * 2;
-    const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, R, 6), white);
-    sp.position.set(Math.cos(a) * R * 0.5, 0, Math.sin(a) * R * 0.5);
-    sp.rotation.set(0, -a, Math.PI / 2);
-    rv.add(sp);
-    const pod = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.9, 1.1), color(i % 2 ? 0xc4161c : 0x1b4f9c, 0.4));
-    pod.position.set(Math.cos(a) * R, 0, Math.sin(a) * R);
-    rv.add(pod);
-  }
-  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.4, 16), M.steel());
-  rv.add(hub);
-  // bulbs round the rim
-  for (let i = 0; i < 32; i++) {
-    const a = (i / 32) * Math.PI * 2;
-    const b = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 4), M.emissive(0xffe08a, 2));
-    b.position.set(Math.cos(a) * (R + 0.2), 0, Math.sin(a) * (R + 0.2));
-    rv.add(b);
-  }
+  const rv = LM2.bigWheelModel(R);
   // cylinder axis (local Y) points across the street
   const axis = right(ws);
   const qw = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
@@ -679,24 +657,7 @@ function balmoral() {
   const e = edgeR(s);
   const g = roadGroup(s, e + 12, 0);
   g.position.y = baseH(s) - 0.6;
-  const stone = M.stone(34, 50, 71, 3, 3);
-  g.add(bx(22, 24, 30, stone, 0, 12, 0));
-  crenellate(g, 11, 24.4, -15, 15, 0.6, stone);
-  // the clock tower on the corner
-  const tg = new THREE.Group();
-  tg.position.set(4, 0, -11);
-  tg.add(bx(7, 44, 7, stone, 0, 22, 0));
-  const face = new THREE.MeshStandardMaterial({ map: clockTex(), roughness: 0.4 });
-  for (let a = 0; a < 4; a++) {
-    const c = new THREE.Mesh(new THREE.CircleGeometry(2.4, 32), face);
-    c.position.set(Math.sin((a * Math.PI) / 2) * 3.52, 38, Math.cos((a * Math.PI) / 2) * 3.52);
-    c.rotation.y = (a * Math.PI) / 2;
-    tg.add(c);
-  }
-  tg.add(cyl(3.2, 4.2, 6, stone, 0, 47, 0, 8));
-  tg.add(cone(3.0, 9, M.slate(), 0, 54.5, 0, 8));
-  tg.add(cyl(0.1, 0.1, 5, M.white(), 0, 61, 0, 6));
-  g.add(tg);
+  g.add(LM2.balmoralModel());
   const sm = mapMat(signTex(['THE BALMORAL'], '#14284a', '#f2c14e', 512, 80, 'Georgia'));
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(9, 1.3), sm);
   sign.position.set(11.05, 8, 0);
@@ -715,20 +676,7 @@ function walnutWhip() {
   const e = edgeR(s);
   const g = roadGroup(s, e + 14, 0);
   g.position.y = baseH(s) - 0.6;
-  g.add(bx(26, 14, 36, color(0xcfcac2, 0.6), 0, 7, 0));
-  for (let y = 2; y < 14; y += 3) g.add(bx(26.1, 1.2, 36.1, color(0x2a3540, 0.2, 0.5), 0, y, 0));
-  // the bronze ribbon, coiled like a certain chocolate
-  const pts: THREE.Vector3[] = [];
-  for (let i = 0; i <= 160; i++) {
-    const t = i / 160;
-    const a = t * Math.PI * 2 * 3.2;
-    const r = 8 * (1 - t * 0.75);
-    pts.push(new THREE.Vector3(Math.cos(a) * r, 14 + t * 26, Math.sin(a) * r));
-  }
-  const curve = new THREE.CatmullRomCurve3(pts);
-  const ribbon = new THREE.Mesh(new THREE.TubeGeometry(curve, 240, 1.3, 6, false), color(0x8a5a2b, 0.35, 0.8));
-  ribbon.scale.set(1, 1, 1.15);
-  g.add(ribbon);
+  g.add(LM2.walnutWhipModel());
   add(g);
   trigger(s - 20, () => G.commentary.say('walnut'));
 }
@@ -943,13 +891,7 @@ function shore() {
   // the harbour pier and its wee lighthouse
   const pg = roadGroup(lh, 22, 0);
   pg.position.y = Road.SEA_Y;
-  pg.add(bx(18, 6, 5, M.stone(30, 44, 91), 5, 2, 0));
-  const tower = new THREE.Group();
-  tower.add(cyl(1.3, 1.6, 9, M.white(), -2, 9.5, 0, 16));
-  tower.add(cyl(1.0, 1.0, 1.4, color(0x2a3540, 0.2, 0.6), -2, 14.7, 0, 12));
-  tower.add(cone(1.3, 1.4, color(0xc4161c, 0.5), -2, 16.1, 0, 12));
-  tower.add(cyl(1.6, 1.6, 0.2, M.black(), -2, 14.0, 0, 16));
-  pg.add(tower);
+  pg.add(LM2.lighthouseModel());
   add(pg);
   trigger(lh - 30, () => G.commentary.say('lighthouse', true));
 

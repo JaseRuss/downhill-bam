@@ -4,6 +4,7 @@ import { M, color, mapMat } from '../art/Materials';
 import { canvas, rng, signTex } from '../art/Textures';
 import { MARKS, JOIN_S, baseH, edgeL, edgeR, roadGroup, toRoad, toWorld } from '../world/Road';
 import { bx, cyl, cone } from './SetPieces';
+import * as LM2 from '../art/Landmarks2';
 
 /**
  * Princes Street Gardens: the valley between Princes Street and the Old Town. A grassy bank drops
@@ -162,29 +163,8 @@ function tree(p: THREE.Vector3, r: () => number) {
 function gallery(s: number, u: number, y: number, len: number) {
   const g = roadGroup(s, u, 0);
   g.position.y = y;
-  const stone = M.stone(38, 66, 121, 2, 1);
   // long axis runs across the street (local x = -u); the portico faces Princes Street (+x)
-  g.add(bx(len, 1.2, 13, stone, 0, 0.6, 0));
-  g.add(bx(len - 1, 8, 11, stone, 0, 5.2, 0));
-  g.add(bx(len, 1.0, 12.4, M.stone(38, 70, 122), 0, 9.6, 0));
-  const ped = new THREE.Mesh(new THREE.CylinderGeometry(6.4, 6.4, len, 3), stone);
-  ped.rotation.set(-Math.PI / 2, 0, -Math.PI / 2);
-  ped.scale.set(1, 1, 0.38);
-  ped.position.set(0, 11.5, 0);
-  g.add(ped);
-  // columns: a portico at the street end and colonnades down both sides
-  const col = M.stone(38, 72, 123);
-  for (let k = 0; k < 6; k++) g.add(cyl(0.38, 0.42, 8, col, len / 2 + 1.2, 5.2, -5 + k * 2, 10));
-  g.add(bx(2.6, 0.8, 12.4, stone, len / 2 + 1.2, 9.6, 0));
-  for (const z of [-5.9, 5.9]) for (let x = -len / 2 + 1.5; x < len / 2; x += 2.4) g.add(cyl(0.3, 0.34, 8, col, x, 5.2, z, 8));
-  // a sphinx or two on the corners, for the Royal Scottish Academy look
-  for (const z of [-5.5, 5.5]) {
-    const sph = new THREE.Mesh(new THREE.SphereGeometry(0.6, 8, 6), M.stone(38, 60, 124));
-    sph.scale.set(1.6, 0.8, 0.8);
-    sph.position.set(len / 2 + 0.2, 10.6, z);
-    g.add(sph);
-  }
-  g.traverse((o: any) => o.isMesh && (o.castShadow = true));
+  g.add(LM2.galleryModel(len));
   add(g);
 }
 
@@ -192,26 +172,7 @@ function gallery(s: number, u: number, y: number, len: number) {
 function rossFountain(s: number, u: number, y: number) {
   const g = roadGroup(s, u, 0);
   g.position.y = y;
-  const teal = color(0x2f8f83, 0.4, 0.5), gold = M.gold(), stone = M.stone(36, 56, 131);
-  g.add(cyl(4.2, 4.4, 0.7, stone, 0, 0.35, 0, 24));
-  const water = new THREE.Mesh(new THREE.CircleGeometry(3.9, 24), new THREE.MeshStandardMaterial({ color: 0x6d9fb4, roughness: 0.05, metalness: 0.3 }));
-  water.rotation.x = -Math.PI / 2;
-  water.position.y = 0.62;
-  g.add(water);
-  g.add(cyl(0.7, 1.1, 2.4, teal, 0, 1.6, 0, 12));
-  g.add(cyl(2.3, 1.2, 0.5, teal, 0, 2.9, 0, 16));
-  g.add(cyl(2.35, 2.35, 0.12, gold, 0, 3.15, 0, 16));
-  g.add(cyl(0.4, 0.6, 1.8, teal, 0, 4.0, 0, 10));
-  g.add(cyl(1.3, 0.6, 0.4, teal, 0, 5.0, 0, 14));
-  g.add(cyl(1.34, 1.34, 0.08, gold, 0, 5.22, 0, 14));
-  g.add(cyl(0.25, 0.35, 1.4, gold, 0, 5.9, 0, 8));
-  g.add(new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 8), gold));
-  g.children[g.children.length - 1].position.y = 6.8;
-  for (let k = 0; k < 4; k++) {
-    const a = (k * Math.PI) / 2;
-    const fig = cyl(0.22, 0.3, 1.2, gold, Math.cos(a) * 1.7, 3.8, Math.sin(a) * 1.7, 8);
-    g.add(fig);
-  }
+  g.add(LM2.rossFountainModel());
   add(g);
 }
 
@@ -280,16 +241,11 @@ function waverley(sA: number, sB: number) {
 
 /** A parked train on the line through the gardens. */
 function train(sA: number, u: number, y: number) {
-  const body = color(0x2a4b8d, 0.4, 0.3), stripe = color(0xf2c14e, 0.5), win = color(0x1d2630, 0.1, 0.6);
   for (let k = 0; k < 4; k++) {
     const s = sA + k * 21;
     const g = roadGroup(s, u, 0);
     g.position.y = y;
-    g.add(bx(2.8, 3.0, 20, body, 0, 2.0, 0));
-    g.add(bx(2.82, 0.9, 19, win, 0, 2.5, 0));
-    g.add(bx(2.84, 0.25, 20, stripe, 0, 1.0, 0));
-    g.add(bx(2.4, 0.4, 19, color(0x333333, 0.6), 0, 0.35, 0));
-    if (k === 3) g.add(bx(2.82, 2.0, 0.4, stripe, 0, 1.9, 10.1));
+    g.add(LM2.trainCarModel(k === 3));
     add(g);
   }
 }

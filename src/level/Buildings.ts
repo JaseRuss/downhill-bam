@@ -6,7 +6,7 @@ import { M, color } from '../art/Materials';
 import { facadeTex, shopTex, signTex, SHOP_NAMES, rng } from '../art/Textures';
 import { shopWindow } from '../art/Interiors';
 import { ball, cyl, lathe, Parts, pipe, q, rbox, V3 } from '../art/Model';
-import { FINE, UNIT, dressed, gable, moulding, roof, sbox } from '../art/Architecture';
+import { FINE, UNIT, archFrame, dressed, gable, moulding, roof, sbox } from '../art/Architecture';
 import { HALF_STREET, BAYS, BAY_T, baseH, theta, toWorld, toRoad, L, roadGroup, right, edgeL, edgeR, forward } from '../world/Road';
 
 export interface Reserved {
@@ -265,6 +265,11 @@ export function close(s: number, side: 1 | -1, width: number, name: string) {
   above.position.set(0, 4.2 + 7, 0);
   above.castShadow = true;
   g.add(above);
+  const cp = new Parts();
+  cp.add(roof(6.5, 2.4, width, { ends: false }), M.slate(), [0, 18.2, 0]);
+  // a round-headed pend, with the close's name over it
+  cp.add(archFrame(Math.max(0.8, width - 0.5), 2.2, 0.18, 0.3, 0.5), dressed(32, 50), [f * 3.3, 0.45, 0], [0, f * Math.PI / 2, 0]);
+  cp.build(g);
   addStatic(g);
 }
 
@@ -302,6 +307,9 @@ export function buildStreet(reserved: Reserved[], sFrom: number, sTo: number, st
         const m = new THREE.Mesh(new THREE.BoxGeometry(10, 16, w * bendScale(s + w / 2, side, e0)), M.stone(32, 40, 5));
         m.position.y = 8;
         filler.add(m);
+        const fp = new Parts();
+        roofOver(fp, M.stone(32, 40, 5), 10, w * bendScale(s + w / 2, side, e0), 16, false);
+        fp.build(filler);
         addStatic(filler);
         s += w;
         continue;
@@ -375,9 +383,17 @@ export function sideStreet(s: number, side: 1 | -1, name: string, angle = 90, wi
       const m = new THREE.Mesh(new THREE.BoxGeometry(9, h, w), k > 0 ? [plain, fm, M.slate(), plain, plain, plain] : [fm, plain, M.slate(), plain, plain, plain]);
       m.position.copy(centre);
       m.position.y = y - 0.6 + h / 2;
-      m.rotation.y = yaw;
       m.castShadow = true;
-      addStatic(m);
+      const blk = new THREE.Group();
+      blk.position.copy(m.position);
+      blk.rotation.y = yaw;
+      m.position.set(0, 0, 0);
+      blk.add(m);
+      const rp = new Parts();
+      const rise = roofOver(rp, plain, 9, w, h / 2, false);
+      chimney(rp, plain, dressed(30, 48), h / 2 + 0.3 + rise, w / 2 - 1, 3);
+      rp.build(blk);
+      addStatic(blk);
       d += w;
     }
   }
@@ -427,10 +443,20 @@ export function angledWall(sA: number, uA: number, sB: number, uB: number, seed:
   const m = new THREE.Mesh(new THREE.BoxGeometry(depth, height, len + 1.2), facadeOnPlusX ? [facade, plain, M.slate(), plain, plain, plain] : [plain, facade, M.slate(), plain, plain, plain]);
   m.position.copy(A).add(B).multiplyScalar(0.5).addScaledVector(out, depth / 2);
   m.position.y = ground + height / 2;
-  m.rotation.y = yaw;
   m.castShadow = true;
   m.receiveShadow = true;
-  addStatic(m);
+  const blk = new THREE.Group();
+  blk.position.copy(m.position);
+  blk.rotation.y = yaw;
+  m.position.set(0, 0, 0);
+  blk.add(m);
+  const rp = new Parts();
+  const rise = roofOver(rp, plain, depth, len + 1.2, height / 2, false);
+  chimney(rp, plain, dressed(30, 50), height / 2 + 0.3 + rise, 0, 4);
+  const fx = facadeOnPlusX ? 1 : -1;
+  rp.add(moulding(len + 1.2, 0.3, 0.4), dressed(30, 52), [(fx * depth) / 2, height / 2 - 0.4, 0], null, [fx, 1, 1]);
+  rp.build(blk);
+  addStatic(blk);
 }
 
 /** Splayed walls and set-back tenements for each side bay. `occupied` lists [s0, s1] taken by set pieces. */

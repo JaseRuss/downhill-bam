@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { baseH, toWorld, S_MIN, S_MAX, COURSE } from './Road';
 import { rng, facadeTex } from '../art/Textures';
 import { QUALITY } from '../core/Platform';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { roof } from '../art/Architecture';
 
 /**
  * Everything beyond the street: an overcast sky with drifting cloud, the Old Town's rooftops and
@@ -157,8 +159,9 @@ export class Backdrop {
     const box = new THREE.BoxGeometry(1, 1, 1);
     const [fmap, femit] = facadeTex(30, 48, 2);
     const blocks = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0xffffff, map: fmap, emissiveMap: femit, emissive: 0xffffff, emissiveIntensity: 0.6 }), items.length);
-    const roofGeo = new THREE.ConeGeometry(0.75, 1, 4);
-    roofGeo.rotateY(Math.PI / 4);
+    // a pitched roof between two gables, a chimney stack on the ridge at each end
+    const stack = (z: number) => new THREE.BoxGeometry(0.1, 0.5, 0.14).translate(0, 0.95, z).toNonIndexed();
+    const roofGeo = mergeGeometries([roof(1, 1, 1), stack(-0.4), stack(0.4)], false)!;
     const roofs = new THREE.InstancedMesh(roofGeo, new THREE.MeshLambertMaterial({ color: 0x3a3f46 }), items.length);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), pos = new THREE.Vector3();
     items.forEach((it, i) => {
@@ -166,7 +169,7 @@ export class Backdrop {
       m.compose(it.p, q, sc.set(it.w, it.h, it.d));
       blocks.setMatrixAt(i, m);
       blocks.setColorAt(i, it.c);
-      pos.copy(it.p).setY(it.p.y + it.h / 2 + 2);
+      pos.copy(it.p).setY(it.p.y + it.h / 2);
       m.compose(pos, q, sc.set(it.w * 1.05, 4, it.d * 1.05));
       roofs.setMatrixAt(i, m);
     });
@@ -185,7 +188,9 @@ export class Backdrop {
     this.scene.add(ch);
 
     // church spires poking out of the haze
-    const spireGeo = new THREE.ConeGeometry(1, 1, 8);
+    // an eight-sided spire with a pinnacle on each corner of its tower
+    const pin = (x: number, z: number) => new THREE.ConeGeometry(0.2, 0.3, 4).translate(x, -0.35, z);
+    const spireGeo = mergeGeometries([new THREE.ConeGeometry(1, 1, 8), pin(-0.72, -0.72), pin(0.72, -0.72), pin(-0.72, 0.72), pin(0.72, 0.72)], false)!;
     const spires = new THREE.InstancedMesh(spireGeo, new THREE.MeshLambertMaterial({ color: 0x3b3a3a }), 26);
     const towers = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0x6a6258 }), 26);
     for (let i = 0; i < 26; i++) {
