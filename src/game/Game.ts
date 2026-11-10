@@ -22,7 +22,8 @@ import { bake } from '../world/Batcher';
 import { Backdrop, HAAR } from '../world/Backdrop';
 import { initInteriors } from '../art/Interiors';
 import { makeEnv } from '../art/Materials';
-import { resetWanted } from '../props/Homages';
+import { policeTally, resetWanted } from '../props/Homages';
+import { Cosmetic, COSMETICS, SLOTS } from './Cosmetics';
 import { MobileUI } from '../ui/MobileUI';
 import { QUALITY, CAM } from '../core/Platform';
 import { FINISH_S, START_S, toWorld, theta, edgeL, edgeR, baseH } from '../world/Road';
@@ -118,6 +119,12 @@ export class Game {
     $('retryBtn').addEventListener('click', () => this.restart(true));
     $('tourBtn').addEventListener('click', () => this.restart(false));
     $('garageBtn').addEventListener('click', () => this.toTitle());
+    for (const id of ['kitBtn', 'kitBtn2']) $(id).addEventListener('click', () => this.openKit());
+    $('kitDone').addEventListener('click', () => {
+      $('kit').classList.remove('show');
+      // back to whichever screen it was opened from
+      if (this.state === 'title' || this.state === 'results') $(this.state).classList.add('show');
+    });
     $('swapBtn').addEventListener('click', () => {
       if (!this.swapTo) return;
       this.career.setVehicle(this.swapTo);
@@ -254,6 +261,7 @@ export class Game {
   restart(skipTour: boolean) {
     $('results').classList.remove('show');
     $('title').classList.remove('show');
+    $('kit').classList.remove('show');
     this.teardown();
     this.build();
     this.swing.reset();
@@ -271,6 +279,7 @@ export class Game {
   /** Back to the title screen and garage (rebuilding so new unlocks show up). */
   toTitle() {
     $('results').classList.remove('show');
+    $('kit').classList.remove('show');
     this.teardown();
     // render the shop interiors once, before any shop windows are built
     initInteriors(this.renderer);
@@ -334,6 +343,66 @@ export class Game {
       }
       garage.appendChild(card);
     }
+  }
+
+  /** The equip screen: a costume, a hat and something for the vehicle, each earned by a side objective. */
+  openKit() {
+    this.sfx.unlock();
+    this.renderKit();
+    $('title').classList.remove('show');
+    $('results').classList.remove('show');
+    $('kit').classList.add('show');
+  }
+
+  renderKit() {
+    const c = this.career;
+    const d = c.data;
+    const root = $('kitSlots');
+    root.innerHTML = '';
+    const card = (cls: string, html: string, pick?: () => void) => {
+      const el = document.createElement('div');
+      el.className = `car ${cls}`;
+      el.innerHTML = html;
+      if (pick) {
+        el.addEventListener('click', () => {
+          pick();
+          this.sfx.boing();
+          // he changes on the spot while he's still sat at the top of the hill
+          if (this.state === 'title') G.trolley.dress();
+          this.renderKit();
+          this.kitNote();
+        });
+      }
+      return el;
+    };
+    for (const s of SLOTS) {
+      const sec = document.createElement('div');
+      sec.className = 'slot';
+      sec.innerHTML = `<h3>${s.title}</h3>`;
+      const opts = document.createElement('div');
+      opts.className = 'opts';
+      const worn = d.equip[s.slot];
+      opts.appendChild(card(worn ? '' : 'sel', `<h4>None</h4><div class="blurb">${s.none}</div>`, () => c.equip(s.slot, null)));
+      for (const k of COSMETICS.filter((x) => x.slot === s.slot)) {
+        if (d.cosmetics.includes(k.id)) {
+          opts.appendChild(card(worn === k.id ? 'sel' : '', `<h4>${k.name}</h4><div class="blurb">${k.blurb}</div>`, () => c.equip(s.slot, k.id)));
+        } else {
+          const [cur, max] = k.progress(d.tally);
+          opts.appendChild(card('locked', `<h4>${k.name}</h4><div class="blurb">Unlock: ${k.how}</div><div class="meter"><div style="width:${Math.min(100, (cur / max) * 100)}%"></div></div><div class="count">${Math.min(cur, max)} / ${max}</div>`));
+        }
+      }
+      sec.appendChild(opts);
+      root.appendChild(sec);
+    }
+    this.kitNote();
+  }
+
+  /** After a run the change only shows once he's back at the top of the hill. */
+  private kitNote() {
+    const sub = $('kit').querySelector('.sub') as HTMLElement;
+    sub.textContent = this.state === 'title'
+      ? 'Optional extras from side objectives. Purely for show: nothing here makes you faster.'
+      : 'Optional extras from side objectives. Changes go on for your next run.';
   }
 
   beginTour() {
@@ -464,10 +533,12 @@ export class Game {
     const t = G.trolley;
     const c = this.career;
     const stage = STAGES[this.tier - 1];
-    let res = { newly: [] as Goal[], record: false, prevBest: 0 };
+    let res = { newly: [] as Goal[], record: false, prevBest: 0, extras: [] as Cosmetic[] };
     if (!this.recorded) {
       this.recorded = true;
-      res = c.record({ score: sc.score, tier: this.tier, finished: this.finished, splash: t.splashed });
+      const downs: Record<string, number> = {};
+      for (const p of G.crowd.tourists) if (p.scored) downs[p.type] = (downs[p.type] ?? 0) + 1;
+      res = c.record({ score: sc.score, tier: this.tier, finished: this.finished, splash: t.splashed, tally: { downs, police: policeTally() } });
     }
     const best = c.bestFor(this.tier);
     const rows = sc.invoice();
@@ -491,6 +562,7 @@ export class Game {
     const d = c.data;
     let box = `<h3>CAREER</h3><div>Points banked: <b>+${fmt(sc.score)}</b></div><div>Bank total: <b>${fmt(d.bank)}</b></div><div>Runs: ${d.runs}</div>`;
     for (const g of res.newly) box += `<div class="unlock">UNLOCKED!<br/>${g.reward}</div>`;
+    for (const k of res.extras) box += `<div class="unlock">KIT BAG!<br/>${k.name}</div>`;
     const next = c.next;
     if (next) {
       const [cur, max] = next.progress(d);
@@ -506,9 +578,9 @@ export class Game {
     $('tourBtn').style.display = this.swapTo ? 'none' : '';
     $('results').classList.add('show');
     this.sfx.seagull();
-    if (res.newly.length) {
+    if (res.newly.length || res.extras.length) {
       this.sfx.cheer(2);
-      this.commentary.show(`Unlocked: ${res.newly.map((g) => g.reward).join(' · ')}!`, 5);
+      this.commentary.show(`Unlocked: ${[...res.newly.map((g) => g.reward), ...res.extras.map((k) => `${k.name} (in the kit bag)`)].join(' · ')}!`, 5);
     } else this.commentary.say('results', true);
   }
 
@@ -543,6 +615,22 @@ export class Game {
   }
 
   /** Title-screen attract mode: glide down the course and back up, looking at the shopfronts. */
+  /** Kit bag open on the title screen: look at Hamish from the front, sat to the right of the cards. */
+  private kitCam(dt: number) {
+    const t = G.trolley;
+    const p = t.position;
+    const f = Road.forward(START_S), r = Road.right(START_S);
+    const pos = p.clone().addScaledVector(f, 3.1).addScaledVector(r, 1.5).add(new THREE.Vector3(0, 1.5, 0));
+    const look = p.clone().add(new THREE.Vector3(0, 0.75, 0));
+    // slide the whole view sideways so he ends up in the right-hand third
+    const side = look.clone().sub(pos).cross(new THREE.Vector3(0, 1, 0)).normalize().multiplyScalar(-1.25);
+    pos.add(side);
+    look.add(side);
+    const k = 1 - Math.exp(-dt * 5);
+    this.rig.pos.lerp(pos, k);
+    this.rig.look.lerp(look, k);
+  }
+
   private attract(dt: number) {
     this.attractT += dt;
     const s0 = START_S + 4, s1 = FINISH_S - 6;
@@ -627,7 +715,8 @@ export class Game {
 
     switch (this.state) {
       case 'title':
-        this.attract(dt);
+        if ($('kit').classList.contains('show')) this.kitCam(dt);
+        else this.attract(dt);
         break;
       case 'tour':
         if (input.action()) this.enterAim();

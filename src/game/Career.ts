@@ -1,4 +1,5 @@
 import type { VehicleId } from '../vehicle/Vehicles';
+import { Cosmetic, COSMETICS, freshTally, LOOK, RunTally, Slot, Tally } from './Cosmetics';
 
 /**
  * Persistent progress, kept in localStorage: the career points bank, best scores, which stretch of
@@ -12,6 +13,10 @@ export interface CareerData {
   vehicles: VehicleId[];
   vehicle: VehicleId;
   splashes: number;
+  /** Side objectives: running totals, what they've unlocked, and what's being worn. */
+  tally: Tally;
+  cosmetics: string[];
+  equip: Partial<Record<Slot, string>>;
 }
 
 export interface RunSummary {
@@ -19,6 +24,7 @@ export interface RunSummary {
   tier: number;
   finished: boolean;
   splash: boolean;
+  tally?: RunTally;
 }
 
 export interface Goal {
@@ -90,7 +96,7 @@ export const GOALS: Goal[] = [
 const KEY = 'downhillbam.career.v1';
 
 function fresh(): CareerData {
-  return { bank: 0, runs: 0, best: {}, goals: [], vehicles: ['trolley'], vehicle: 'trolley', splashes: 0 };
+  return { bank: 0, runs: 0, best: {}, goals: [], vehicles: ['trolley'], vehicle: 'trolley', splashes: 0, tally: freshTally(), cosmetics: [], equip: {} };
 }
 
 export class Career {
@@ -108,6 +114,27 @@ export class Career {
       }
     } catch {}
     if (!this.data.vehicles.includes(this.data.vehicle)) this.data.vehicle = 'trolley';
+    this.data.tally = { ...freshTally(), ...this.data.tally };
+    this.syncLook();
+  }
+
+  /** Publish what's equipped (dropping anything not actually owned) for the models to read. */
+  private syncLook() {
+    const d = this.data;
+    for (const k of Object.keys(LOOK) as Slot[]) delete LOOK[k];
+    for (const c of COSMETICS) {
+      if (d.equip[c.slot] === c.id && d.cosmetics.includes(c.id)) LOOK[c.slot] = c.id;
+    }
+    d.equip = { ...LOOK };
+  }
+
+  /** Wear something (or pass null to take the slot back to normal). */
+  equip(slot: Slot, id: string | null) {
+    if (id && !this.data.cosmetics.includes(id)) return;
+    if (id) this.data.equip[slot] = id;
+    else delete this.data.equip[slot];
+    this.syncLook();
+    this.save();
   }
 
   save() {
@@ -156,12 +183,28 @@ export class Career {
       if (g.vehicle && !d.vehicles.includes(g.vehicle)) d.vehicles.push(g.vehicle);
       newly.push(g);
     }
+    // side objectives: any order, and they keep counting whatever stage you're on
+    const extras: Cosmetic[] = [];
+    if (run.tally) {
+      const t = d.tally;
+      for (const k of ['wizard', 'hearts', 'hibs', 'marcher'] as const) t[k] += run.tally.downs[k] ?? 0;
+      const [hit, total] = run.tally.police;
+      if (total > 0 && hit >= total) t.cleanSweeps++;
+    }
+    for (const c of COSMETICS) {
+      if (d.cosmetics.includes(c.id)) continue;
+      const [cur, max] = c.progress(d.tally);
+      if (cur < max) continue;
+      d.cosmetics.push(c.id);
+      extras.push(c);
+    }
     this.save();
-    return { newly, record, prevBest };
+    return { newly, record, prevBest, extras };
   }
 
   reset() {
     this.data = fresh();
+    this.syncLook();
     this.save();
   }
 }

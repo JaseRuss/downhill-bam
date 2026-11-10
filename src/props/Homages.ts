@@ -16,10 +16,14 @@ import { ball, cyl, extrude, lathe, model, Parts, pipe, q, rbox } from '../art/M
 // ------------------------------------------------------------------ the wanted level
 let wanted = 0;
 const MAX_STARS = 5;
+/** Polis cars on the course this run, and how many have been hit. */
+let cars = 0, carsHit = 0;
+export const policeTally = (): [number, number] => [carsHit, cars];
 
 /** Clear the wanted level (every new run). */
 export function resetWanted() {
   wanted = 0;
+  cars = carsHit = 0;
   showWanted();
 }
 
@@ -79,11 +83,13 @@ export function policeCar(s: number, u: number, yawExtra = 0) {
     blueB.emissiveIntensity = on ? 0.2 : 3;
   });
   let done = false;
+  cars++;
   G.destruction.add(toWorld(s, u, 0.85), theta(s) - Math.PI / 2 + yawExtra, [2.1, 0.85, 0.9], {
     visual: v, dynamic: true, density: 115, points: 600, label: 'POLIS Car', sound: 'metal', restitution: 0.25, friction: 0.9,
     onHit: (p) => {
       if (done) return;
       done = true;
+      carsHit++;
       crime(p.mesh.position);
     },
   });

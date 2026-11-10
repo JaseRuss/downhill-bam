@@ -3,6 +3,24 @@ import { RAPIER, Entity } from '../core/Physics';
 import { G } from '../ctx';
 import { toRoad, toWorld, edgeL, edgeR } from '../world/Road';
 import { buildHuman, D, hamishOutfit, poseFlail, poseRun, Rig } from '../art/Humanoid';
+import { pointyHat } from '../art/Accessories';
+import { color } from '../art/Materials';
+import { LOOK } from '../game/Cosmetics';
+
+/** Hamish as currently dressed: whatever costume and hat are equipped. */
+export function hamishRig(withHat = true): Rig {
+  const o = hamishOutfit();
+  if (LOOK.costume === 'maroon') o.shirt = color(0x7a1f3d, 0.75);
+  else if (LOOK.costume === 'green') o.shirt = color(0x0b6b3a, 0.75);
+  else if (LOOK.costume === 'marcher') {
+    o.shirt = color(0x2f55d4, 0.6);
+    o.hair = o.beard = color(0x2fbf3a, 0.7);
+  }
+  if (!withHat || LOOK.hat) o.hat = null;
+  const rig = buildHuman(o);
+  if (withHat && LOOK.hat === 'wizard') rig.hat = pointyHat(rig, false);
+  return rig;
+}
 
 /** Hamish: ginger beard, tam o' shanter, kilt, unwavering confidence. */
 export interface SeatedRider {
@@ -12,7 +30,7 @@ export interface SeatedRider {
 
 /** Seated in the trolley basket (trolley-local: forward = +X), arms up, legs over the front. */
 export function buildSeatedRider(): SeatedRider {
-  const rig = buildHuman(hamishOutfit());
+  const rig = hamishRig();
   const s = rig.height / 1.75;
   const group = new THREE.Group();
   group.add(rig.root);
@@ -77,7 +95,7 @@ export class Ragdoll implements Entity {
     const spin = new THREE.Vector3((Math.random() - 0.5) * 16, (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 16);
 
     // the figure: every bone hangs straight off the root, so each can follow its own body
-    const rig = (this.rig = buildHuman(o));
+    const rig = (this.rig = hamishRig());
     const joint0 = rig.bones.map((bn) => bn.getWorldPosition(new THREE.Vector3()).sub(rig.pelvis.position));
     for (const bn of rig.bones) rig.root.add(bn);
     rig.body.frustumCulled = false;
@@ -220,9 +238,7 @@ export class Runner implements Entity {
     );
     const col = G.physics.world.createCollider(RAPIER.ColliderDesc.capsule(0.45, 0.25).setFriction(0.5), this.body);
     G.physics.register(col, this);
-    const o = hamishOutfit();
-    o.hat = null; // it's somewhere back up the hill
-    this.rig = buildHuman(o);
+    this.rig = hamishRig(false); // the hat's somewhere back up the hill
     this.mesh.add(this.rig.root);
     scene.add(this.mesh);
   }

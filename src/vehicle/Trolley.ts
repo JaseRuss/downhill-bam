@@ -5,6 +5,8 @@ import * as Road from '../world/Road';
 import { theta, toWorld, toRoad, forward, right, edgeL, edgeR } from '../world/Road';
 import { buildSeatedRider, Ragdoll, Runner, SeatedRider, seatKilt } from './Rider';
 import { VEHICLES, VehicleId, VehicleParts, VehicleSpec } from './Vehicles';
+import { LOOK } from '../game/Cosmetics';
+import { color } from '../art/Materials';
 
 const HOP_RECHARGE = 5;
 
@@ -27,7 +29,11 @@ export class Trolley implements Entity {
   mesh = new THREE.Group();
   wheels: THREE.Object3D[] = [];
   springs: THREE.Object3D[] = [];
-  rider: SeatedRider;
+  rider!: SeatedRider;
+  /** The polis light, if it's bolted on: the bar and its two lamps. */
+  private siren: { group: THREE.Group; lamps: THREE.MeshStandardMaterial[] } | null = null;
+  /** The bare vehicle's size (vehicle space), for bolting things on. */
+  private bounds: THREE.Box3;
   ragdoll: Ragdoll | null = null;
   runner: Runner | null = null;
   private getUpAt = 0;
@@ -98,12 +104,52 @@ export class Trolley implements Entity {
     this.wheels = this.parts.wheels;
     this.springs = this.parts.springs;
     this.mesh.traverse((o: any) => o.isMesh && (o.castShadow = true));
+    this.bounds = new THREE.Box3().setFromObject(this.mesh);
+    this.dress();
+    scene.add(this.mesh);
+    this.sync(0);
+  }
+
+  /** Put Hamish in the seat in whatever he's wearing, and fit any bolt-ons. Safe to call again. */
+  dress() {
+    const spec = this.spec;
+    if (this.rider) {
+      this.mesh.remove(this.rider.group);
+      this.rider.rig.body.skeleton.dispose();
+      this.rider.rig.body.geometry.dispose();
+    }
     this.rider = buildSeatedRider();
     this.rider.group.position.set(spec.seat[0], spec.seat[1], 0);
     this.rider.rig.pelvis.rotation.z = spec.seat[2];
-    this.mesh.add(this.rider.group);
-    scene.add(this.mesh);
-    this.sync(0);
+    if (!this.ejected) this.mesh.add(this.rider.group);
+    if (this.siren) {
+      this.mesh.remove(this.siren.group);
+      this.siren = null;
+    }
+    if (LOOK.vehicle === 'siren') {
+      // a light bar on a pole at the back, clear of his head
+      const b = this.bounds;
+      const g = new THREE.Group();
+      const steel = color(0x2a2c30, 0.5, 0.6);
+      const top = Math.max(b.max.y, spec.seat[1] + 0.9) + 0.25;
+      const base = Math.min(b.max.y, spec.seat[1]) - 0.1;
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, top - base, 8), steel);
+      pole.position.y = (top + base) / 2;
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.05, 0.5), steel);
+      bar.position.y = top;
+      g.add(pole, bar);
+      const lamps = [-1, 1].map((z) => {
+        const m = new THREE.MeshStandardMaterial({ color: 0x1b4fff, emissive: 0x1b4fff, emissiveIntensity: 0.2, roughness: 0.2 });
+        const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.085, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), m);
+        lamp.position.set(0, top + 0.025, z * 0.15);
+        g.add(lamp);
+        return m;
+      });
+      g.position.x = b.min.x + 0.1;
+      g.traverse((o: any) => o.isMesh && (o.castShadow = true));
+      this.mesh.add(g);
+      this.siren = { group: g, lamps };
+    }
   }
 
   private riderDesc() {
@@ -505,6 +551,12 @@ export class Trolley implements Entity {
       w.rotation.y = i < 2 ? -(this.vc.wheelSteering(i) ?? 0) : 0;
       const spin = w.getObjectByName('spin')!;
       spin.rotation.z = -(this.vc.wheelRotation(i) ?? 0);
+    }
+    if (this.siren) {
+      // flashing away, in complete silence
+      const on = Math.floor(G.time * 4) % 2 === 0;
+      this.siren.lamps[0].emissiveIntensity = on ? 3 : 0.2;
+      this.siren.lamps[1].emissiveIntensity = on ? 0.2 : 3;
     }
     if (this.parts.spinner && this.engineOn) {
       this.spinA += dt * (this.ejected ? 8 : 40);
