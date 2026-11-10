@@ -62,6 +62,8 @@ export class Game {
 
   /** What the current world was built for. */
   vehicle: VehicleId = 'trolley';
+  /** A vehicle unlocked by the run just finished, offered on the results screen. */
+  private swapTo: VehicleId | null = null;
   tier = 1;
   state: State = 'title';
   stateT = 0;
@@ -116,6 +118,11 @@ export class Game {
     $('retryBtn').addEventListener('click', () => this.restart(true));
     $('tourBtn').addEventListener('click', () => this.restart(false));
     $('garageBtn').addEventListener('click', () => this.toTitle());
+    $('swapBtn').addEventListener('click', () => {
+      if (!this.swapTo) return;
+      this.career.setVehicle(this.swapTo);
+      this.restart(true);
+    });
     $('resetBtn').addEventListener('click', () => {
       if (confirm('Wipe your career? Points, unlocked stages and vehicles all go.')) {
         this.career.reset();
@@ -490,6 +497,13 @@ export class Game {
       box += `<div style="margin-top:12px">NEXT GOAL:<br/><span style="font-family:'Special Elite'">${next.title}</span><div class="meter"><div style="width:${Math.min(100, (cur / max) * 100)}%"></div></div><div style="font-size:13px;opacity:.85">${fmt(Math.min(cur, max))} / ${fmt(max)} → ${next.reward}</div></div>`;
     } else box += `<div style="margin-top:12px">All goals done. Absolute menace.</div>`;
     $('results').querySelector('.careerBox')!.innerHTML = box;
+    // a new vehicle in the garage: offer to take it straight out
+    this.swapTo = res.newly.map((g) => g.vehicle).filter((v): v is VehicleId => !!v && v !== this.vehicle).pop() ?? null;
+    const swap = $('swapBtn');
+    swap.style.display = this.swapTo ? '' : 'none';
+    if (this.swapTo) swap.textContent = `DRIVE ${VEHICLES[this.swapTo].name.replace(/^The /, 'THE ').toUpperCase()}`;
+    $('retryBtn').classList.toggle('alt', !!this.swapTo);
+    $('tourBtn').style.display = this.swapTo ? 'none' : '';
     $('results').classList.add('show');
     this.sfx.seagull();
     if (res.newly.length) {
