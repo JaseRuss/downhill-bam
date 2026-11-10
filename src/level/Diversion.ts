@@ -21,6 +21,7 @@ import { princesGardens, inGardens, GARDEN_START } from './Gardens';
 import { skooshCan } from '../props/Pickups';
 import { marchers, policeCar, policeBox, arcadeCabinet } from '../props/Homages';
 import { shopWindow } from '../art/Interiors';
+import * as LM from '../art/Landmarks';
 
 /**
  * The long course: the Royal Mile is shut, so it's down George IV Bridge and Victoria Street to the
@@ -511,31 +512,9 @@ function caledonian() {
 // =====================================================================
 function scottMonument(s: number, u: number) {
   if (!on(s - 40)) return;
-  const black = M.stone(28, 22, 61, 2, 4);
   const g = roadGroup(s, u, 0);
   g.position.y = baseH(s) - 7;
-  // four-legged base with arches, then tapering tiers of pinnacles up to a spike
-  for (const [x, z] of [[-5, -5], [5, -5], [-5, 5], [5, 5]]) {
-    g.add(bx(2.4, 20, 2.4, black, x, 10, z));
-    g.add(cone(0.7, 5, black, x, 22.5, z, 6));
-  }
-  g.add(bx(12.4, 3, 12.4, black, 0, 21, 0));
-  // Sir Walter, in white marble, sitting under the canopy with his dog
-  g.add(bx(1.6, 1.4, 1.6, M.stone(36, 60, 2), 0, 0.7, 0));
-  g.add(cyl(0.6, 0.8, 2.4, color(0xf2efe8, 0.6), 0, 2.6, 0, 10));
-  g.add(new THREE.Mesh(new THREE.SphereGeometry(0.4, 10, 8), color(0xf2efe8, 0.6)));
-  g.children[g.children.length - 1].position.y = 4.1;
-  let y = 22.5;
-  let w = 10;
-  for (let k = 0; k < 5; k++) {
-    const h = 8 - k;
-    g.add(bx(w, h, w, black, 0, y + h / 2, 0));
-    for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) g.add(cone(0.5, 4, black, (x * w) / 2, y + h + 1.5, (z * w) / 2, 6));
-    for (let a = 0; a < 4; a++) g.add(bx(1.4, h * 0.6, 0.2, M.black(), Math.sin((a * Math.PI) / 2) * (w / 2 + 0.05), y + h / 2, Math.cos((a * Math.PI) / 2) * (w / 2 + 0.05)));
-    y += h;
-    w *= 0.72;
-  }
-  g.add(cone(w * 0.7, 9, black, 0, y + 4.5, 0, 8));
+  g.add(LM.scottMonumentModel());
   add(g);
   trigger(s - 30, () => G.commentary.say('scott'));
 }

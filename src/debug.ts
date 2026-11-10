@@ -121,5 +121,46 @@ export function installDebug(game: any) {
     const log = drive(secs * 60, hopAt);
     return log + '\n' + JSON.stringify([...G.scoring.log.values()].map((i) => `${i.label} x${i.count}`));
   };
-  Object.assign(w, { F, key, press, ru, hd, launchOnly, drive, autopilot, setCareer, Road });
+  /**
+   * Render cost: whole-scene totals (meshes, triangles, geometry memory) and what a camera looking
+   * down the street draws at each of a few points along the course.
+   */
+  const stats = (points = 8) => {
+    const scene = G.scene, r = game.renderer;
+    const seen = new Set<any>();
+    let meshes = 0, tris = 0, bytes = 0, sMeshes = 0, sTris = 0, sBytes = 0;
+    scene.traverse((o: any) => {
+      if (!o.isMesh) return;
+      meshes++;
+      const g = o.geometry;
+      const n = (g.index ? g.index.count : g.getAttribute('position').count) / 3;
+      tris += n * (o.isInstancedMesh ? o.count : 1);
+      if (seen.has(g)) return;
+      seen.add(g);
+      let b = g.index ? g.index.array.byteLength : 0;
+      for (const k in g.attributes) b += g.attributes[k].array.byteLength;
+      bytes += b;
+      // the merged static scenery (buildings, landmarks) on its own
+      if (o.userData.batch) { sMeshes++; sTris += n; sBytes += b; }
+    });
+    const cam = G.camera.clone();
+    const views: string[] = [];
+    let calls = 0, drawn = 0, worst = 0;
+    for (let i = 0; i < points; i++) {
+      const s = Road.START_S + ((Road.FINISH_S - Road.START_S) * (i + 0.5)) / points;
+      cam.position.copy(Road.toWorld(s, 0, 3.2));
+      cam.lookAt(Road.toWorld(s + 14, 0, 1.5));
+      cam.updateMatrixWorld(true);
+      r.render(scene, cam);
+      const c = r.info.render.calls, t = r.info.render.triangles;
+      calls += c; drawn += t; worst = Math.max(worst, c);
+      views.push(`s=${s.toFixed(0)}: ${c} calls, ${(t / 1000).toFixed(0)}k tris`);
+    }
+    return {
+      course: Road.COURSE, tier: game.tier, meshes, sceneTris: Math.round(tris), geometries: r.info.memory.geometries, textures: r.info.memory.textures,
+      geometryMB: +(bytes / 1048576).toFixed(1),
+      staticMeshes: sMeshes, staticTris: Math.round(sTris), staticMB: +(sBytes / 1048576).toFixed(1), avgCalls: Math.round(calls / points), worstCalls: worst, avgDrawnTris: Math.round(drawn / points), views,
+    };
+  };
+  Object.assign(w, { F, key, press, ru, hd, launchOnly, drive, autopilot, setCareer, stats, Road, game });
 }

@@ -12,6 +12,9 @@ import * as Road from './world/Road';
 import * as P from './props/Props';
 import * as Hm from './props/Homages';
 import * as Mo from './art/Motors';
+import * as LM from './art/Landmarks';
+import * as B from './level/Buildings';
+import { initInteriors } from './art/Interiors';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(1);
@@ -22,6 +25,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 document.body.appendChild(renderer.domElement);
 makeEnv(renderer);
+initInteriors(renderer);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xcfd6da);
@@ -39,7 +43,7 @@ const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshSta
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
-const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.05, 200);
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.05, 900);
 
 const stage = new THREE.Group();
 scene.add(stage);
@@ -114,7 +118,98 @@ function vehicle(id: VehicleId, z = 0) {
   stage.add(g);
 }
 
+/** Buildings need a bigger stage than props: widen the ground and the sun's shadow to `r` metres. */
+function big(r: number) {
+  sc.left = -r; sc.right = r; sc.top = r; sc.bottom = -r; sc.far = r * 5;
+  sc.updateProjectionMatrix();
+  sun.position.set(r * 0.9, r * 1.8, r * 0.8);
+  ground.scale.setScalar(Math.max(1, r / 12));
+}
+const put = (o: THREE.Object3D, x = 0, y = 0, z = 0, yaw = 0) => {
+  o.position.set(x, y, z);
+  o.rotation.y = yaw;
+  stage.add(o);
+  return o;
+};
+
 const MODELS: Record<string, () => void> = {
+  // ---- buildings and landmarks (yaw 0 looks at the street face)
+  gatehouse: () => {
+    big(30);
+    put(LM.gatehouseModel(), 0, 0, 0, Math.PI / 2);
+  },
+  castle: () => {
+    big(70);
+    const g = new THREE.Group();
+    g.add(LM.gatehouseModel(), LM.castleKeepModel());
+    [[0, 0, -6, -32, 46, 23, 29, 0], [1, -26, -9, -30, 26, 20, 24, 1.1], [2, 27, -10, -34, 24, 19, 22, 2.3]].forEach(([i, x, y, z, sx, sy, sz, yaw]) => {
+      const c = LM.cragModel(i, sx, sy, sz, yaw);
+      c.position.set(x, y, z);
+      g.add(c);
+    });
+    put(g, 0, 6, 0, Math.PI / 2);
+  },
+  esplanade: () => {
+    big(16);
+    put(LM.esplanadeWallModel(24), -3, 0.35, 0);
+    put(LM.gunModel(), 2, 0, 0, Math.PI / 2);
+    put(LM.postModel(5.5), 2, 0, 4);
+  },
+  stgiles: () => {
+    big(45);
+    const top = 17, tH = 26;
+    put(LM.stGilesNaveModel(56, top, 0, -24, 0.4), -2.8, 0, 0);
+    put(LM.stGilesTowerModel(tH), 0, 0, 0);
+    // the crown, laid out as the level does it
+    const c = new THREE.Group();
+    c.position.y = tH;
+    stage.add(c);
+    for (const [x, z, hx, hz] of [[0, 3.0, 3.2, 0.2], [0, -3.0, 3.2, 0.2], [3.0, 0, 0.2, 2.8], [-3.0, 0, 0.2, 2.8]]) {
+      const m = LM.crownParapetModel(Math.max(hx, hz) * 2, 0.4);
+      m.position.set(x, 0.45, z);
+      if (hz > hx) m.rotation.y = Math.PI / 2;
+      c.add(m);
+    }
+    for (const [x, z] of [[2.9, 2.9], [-2.9, 2.9], [2.9, -2.9], [-2.9, -2.9]]) {
+      const m = LM.crownPinnacleModel();
+      m.position.set(x, 2.0, z);
+      c.add(m);
+    }
+    for (const [x, z] of [[2.7, 2.7], [-2.7, 2.7], [2.7, -2.7], [-2.7, -2.7], [2.9, 0], [-2.9, 0], [0, 2.9], [0, -2.9]]) {
+      const a = new THREE.Vector3(x, 1.0, z), b = new THREE.Vector3(0, 4.4, 0);
+      const hl = Math.hypot(x, z);
+      const m = LM.crownRibModel(a.distanceTo(b), -x / hl, -z / hl);
+      m.position.copy(a).add(b).multiplyScalar(0.5);
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+      c.add(m);
+    }
+    const l = LM.crownLanternModel();
+    l.position.y = 5.4;
+    const sp = LM.crownSpireModel();
+    sp.position.y = 8.0;
+    c.add(l, sp);
+  },
+  scott: () => {
+    big(50);
+    put(LM.scottMonumentModel());
+  },
+  tenements: () => {
+    big(40);
+    // a run of lands down the right-hand side of the Royal Mile, turned to face the camera
+    const g = new THREE.Group();
+    let s = 200;
+    [[11, 19], [8, 15], [13, 22], [9, 14], [12, 24], [10, 17]].forEach(([w, h], i) => {
+      g.add(B.tenement(s, w, 1, h, 100 + i * 7));
+      s += w;
+    });
+    const c = Road.toWorld(230, 12, 0);
+    g.position.set(-c.x, -Road.baseH(230), -c.z);
+    const turn = new THREE.Group();
+    turn.add(g);
+    turn.rotation.y = -Road.theta(230);
+    stage.add(turn);
+  },
+
   props: () => {
     row(1.5, 9);
     const v = new THREE.Vector3();
@@ -224,6 +319,7 @@ const MODELS: Record<string, () => void> = {
 
 (window as any).show = (name: string) => {
   stage.clear();
+  big(8);
   (MODELS[name] ?? MODELS.hamish)();
   stage.traverse((o: any) => {
     if (o.isMesh) {

@@ -10,6 +10,7 @@ import { barrel, barrier, hatCone, haggis, scaffold, yawQ, aBoard, communalBin, 
 import type { Part } from '../destruction/Destruction';
 import { buildHuman } from '../art/Humanoid';
 import { cyl as mcyl, lathe, loft, model, Parts, q as mq, rbox } from '../art/Model';
+import * as LM from '../art/Landmarks';
 
 // ---------- helpers ----------
 function bx(w: number, h: number, d: number, mat: THREE.Material | THREE.Material[], x = 0, y = 0, z = 0) {
@@ -121,8 +122,7 @@ export function castleEsplanade(opts: { castle?: boolean } = {}) {
   // parapet walls along the esplanade
   for (const side of [-1, 1]) {
     const g = roadGroup(-28, side * 8.6, 0);
-    g.add(bx(0.8, 1.3, 48, stone, 0, 0.3, 0));
-    g.add(bx(1.0, 0.15, 48, M.stone(34, 56, 2), 0, 0.98, 0));
+    g.add(LM.esplanadeWallModel(48));
     add(g);
     staticBox(-28, side * 8.6, baseH(-28) + 0.6, 0.4, 1.2, 24);
   }
@@ -130,33 +130,7 @@ export function castleEsplanade(opts: { castle?: boolean } = {}) {
   const s0 = -50;
   const g = roadGroup(s0, 0, 0);
   g.position.y = baseH(s0) - 0.5;
-  g.add(bx(30, 13, 4, stone, 0, 6.5, -1));
-  crenellate(g, -1, 13.4, -15, 15, 4, stone, true);
-  // gate arch + portcullis
-  g.add(bx(4.6, 6.2, 0.4, M.black(), 0, 3.1, 1.05));
-  for (let i = -2; i <= 2; i++) g.add(bx(0.12, 6, 0.12, M.metal(), i * 0.9, 3.2, 1.3));
-  for (let j = 0; j < 5; j++) g.add(bx(4.4, 0.12, 0.12, M.metal(), 0, 0.8 + j * 1.2, 1.3));
-  g.add(bx(6.2, 1.0, 0.6, M.stone(34, 58, 2), 0, 6.8, 1.2));
-  // statues of Wallace & Bruce in their niches
-  for (const x of [-4.6, 4.6]) {
-    g.add(bx(1.6, 3.2, 0.6, M.black(), x, 3.2, 0.9));
-    const fig = new THREE.Group();
-    fig.add(cyl(0.35, 0.45, 1.6, color(0x4d5a52, 0.5, 0.5), 0, 0.8, 0));
-    fig.add(new THREE.Mesh(new THREE.SphereGeometry(0.25, 10, 8), color(0x4d5a52, 0.5, 0.5)));
-    fig.children[1].position.y = 1.85;
-    fig.position.set(x, 1.9, 1.1);
-    g.add(fig);
-  }
-  // drum towers
-  for (const x of [-9, 9]) {
-    g.add(cyl(3, 3.2, 17, stone, x, 8.5, 0.5, 20));
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
-      g.add(bx(0.8, 0.9, 0.8, stone, x + Math.cos(a) * 2.8, 17.4, 0.5 + Math.sin(a) * 2.8));
-    }
-  }
-  // flagpole with saltire
-  g.add(cyl(0.08, 0.1, 8, M.white(), 0, 17, -1));
+  g.add(LM.gatehouseModel());
   const flag = new THREE.Mesh(new THREE.PlaneGeometry(3, 1.9), new THREE.MeshStandardMaterial({ map: saltireTex(), side: THREE.DoubleSide }));
   const flagGroup = roadGroup(s0, 0, 0);
   flagGroup.position.y = baseH(s0) - 0.5;
@@ -165,13 +139,13 @@ export function castleEsplanade(opts: { castle?: boolean } = {}) {
   G.scene.add(flagGroup);
   // castle rock & keep looming behind
   if (opts.castle !== false) {
-    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(30, 1), color(0x4a4640, 1));
-    rock.scale.set(1.6, 0.8, 1);
-    rock.position.set(0, -6, -32);
-    g.add(rock);
-    g.add(bx(40, 14, 16, dark, 0, 12, -26));
-    g.add(bx(14, 10, 10, stone, -8, 22, -26));
-    g.add(bx(10, 8, 8, stone, 10, 20, -28));
+    const dark = color(0x5a554d, 0.95);
+    for (const [i, x, y, z, sx, sy, sz, yaw] of [[0, 0, -6, -32, 46, 23, 29, 0], [1, -26, -9, -30, 26, 20, 24, 1.1], [2, 27, -10, -34, 24, 19, 22, 2.3]]) {
+      const c = LM.cragModel(i, sx, sy, sz, yaw, dark);
+      c.position.set(x, y, z);
+      g.add(c);
+    }
+    g.add(LM.castleKeepModel());
   }
   add(g);
   staticBox(s0, 0, baseH(s0) + 6, 15, 7, 2);
@@ -181,22 +155,18 @@ export function castleEsplanade(opts: { castle?: boolean } = {}) {
 
   // One O'Clock Gun
   const cg = roadGroup(-30, -6.6, 0);
-  const barrelM = cyl(0.22, 0.32, 2.6, M.black(), 0, 0.9, 0.3);
-  barrelM.rotation.x = Math.PI / 2 - 0.15;
-  cg.add(barrelM);
-  cg.add(bx(0.8, 0.5, 1.4, M.wood(20, 25, 2), 0, 0.45, 0));
-  for (const x of [-0.5, 0.5]) {
-    const w = cyl(0.45, 0.45, 0.12, M.wood(20, 22, 4), x, 0.45, 0);
-    w.rotation.z = Math.PI / 2;
-    cg.add(w);
-  }
+  cg.add(LM.gunModel());
   cg.rotation.y += -0.5;
   add(cg);
   staticBox(-30, -6.6, baseH(-30) + 0.6, 0.6, 0.6, 1.0);
 
   // MILE START banner
   const bg = roadGroup(-4, 0, 0);
-  for (const x of [-7.3, 7.3]) bg.add(cyl(0.1, 0.12, 5.5, M.metal(), x, 2.75, 0));
+  for (const x of [-7.3, 7.3]) {
+    const post = LM.postModel(5.5);
+    post.position.x = x;
+    bg.add(post);
+  }
   const banner = new THREE.Mesh(
     new THREE.PlaneGeometry(14.4, 1.3),
     new THREE.MeshStandardMaterial({ map: signTex(['THE ROYAL MILE · 0.0 MILES · NAE BRAKES'], '#14284a', '#f2c14e', 1024, 128), side: THREE.DoubleSide }),
@@ -338,25 +308,7 @@ export function stGiles() {
   ng.position.y = ground;
   const len = sB - sA;
   const top = baseH(sA) - ground + 16;
-  ng.add(bx(12, top, len, stone, 0, top / 2, 0));
-  const roof = bx(12 / Math.SQRT2, 12 / Math.SQRT2, len + 0.4, color(0x58646e, 0.5, 0.3), 0, top, 0);
-  roof.rotation.z = Math.PI / 4;
-  ng.add(roof);
-  // buttresses + stained glass on the street side (+X local faces the street for u>0)
-  for (let z = -len / 2 + 3; z < len / 2 - 2; z += 4.5) {
-    if (Math.abs(z - (towerS - (sA + sB) / 2)) < 4.5) continue;
-    ng.add(bx(1.2, top * 0.85, 1.0, stoneHi, 6.4, (top * 0.85) / 2, z));
-    ng.add(cone(0.5, 2.2, stoneHi, 6.4, top * 0.85 + 1.0, z, 4));
-    const win = new THREE.Mesh(
-      new THREE.PlaneGeometry(2.0, 7),
-      new THREE.MeshStandardMaterial({ map: stainedGlassTex(Math.floor(z) + 50), emissive: 0xffffff, emissiveMap: stainedGlassTex(Math.floor(z) + 50), emissiveIntensity: 0.5, transparent: true }),
-    );
-    win.position.set(6.02, top * 0.55, z + 2.25);
-    win.rotation.y = Math.PI / 2;
-    ng.add(win);
-  }
-  // west door
-  ng.add(bx(0.4, 5, 3.4, M.black(), 6.1, 2.5 + (baseH(sA + 4) - ground), -len / 2 + 4));
+  ng.add(LM.stGilesNaveModel(len, top, towerS - (sA + sB) / 2, -len / 2 + 4, baseH(sA + 4) - ground));
   add(ng);
   staticBox((sA + sB) / 2, 18.2, ground + 10, 6, 10, len / 2);
 
@@ -364,13 +316,7 @@ export function stGiles() {
   const tg = roadGroup(towerS, towerU, 0);
   tg.position.y = ground;
   const tH = baseH(towerS) - ground + towerH;
-  tg.add(bx(6.4, tH, 6.4, stone, 0, tH / 2, 0));
-  for (const x of [-3.25, 3.25]) for (let k = 0; k < 2; k++) tg.add(bx(0.1, 2.6, 1.0, M.black(), x, tH - 4, -1.2 + k * 2.4));
-  for (const z of [-3.25, 3.25]) for (let k = 0; k < 2; k++) tg.add(bx(1.0, 2.6, 0.1, M.black(), -1.2 + k * 2.4, tH - 4, z));
-  const clockFace = new THREE.Mesh(new THREE.CircleGeometry(0.9, 24), mapMat(clockTex()));
-  clockFace.position.set(3.22, tH - 8, 0);
-  clockFace.rotation.y = Math.PI / 2;
-  tg.add(clockFace);
+  tg.add(LM.stGilesTowerModel(tH));
   add(tg);
   staticBox(towerS, towerU, ground + tH / 2, 3.2, tH / 2, 3.2);
 
@@ -383,19 +329,18 @@ export function stGiles() {
   const yaw = theta(towerS);
   const qy = yawQ(yaw);
   const local = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z).applyQuaternion(qy).add(center);
-  const copts = { density: 600, release: 9999, points: 120, label: 'Crown Spire', sound: 'stone' as const, fracture: [2, 2, 2] as [number, number, number], fractureLoad: 900 };
+  const copts = { density: 600, release: 9999, points: 120, label: 'Crown Spire', sound: 'stone' as const, fracture: [2, 2, 2] as [number, number, number], fractureLoad: 900, pieceMat: crownMat };
   // parapet
   for (const [x, z, hx, hz] of [[0, 3.0, 3.2, 0.2], [0, -3.0, 3.2, 0.2], [3.0, 0, 0.2, 2.8], [-3.0, 0, 0.2, 2.8]]) {
-    crown.push(G.destruction.add(local(x, 0.45, z), qy, [hx, 0.45, hz], { mat: crownMat, ...copts }));
+    const v = new THREE.Group();
+    const m = LM.crownParapetModel(Math.max(hx, hz) * 2, 0.4);
+    if (hz > hx) m.rotation.y = Math.PI / 2;
+    v.add(m);
+    crown.push(G.destruction.add(local(x, 0.45, z), qy, [hx, 0.45, hz], { visual: v, ...copts }));
   }
   // corner pinnacles
   for (const [x, z] of [[2.9, 2.9], [-2.9, 2.9], [2.9, -2.9], [-2.9, -2.9]]) {
-    const v = new THREE.Group();
-    v.add(cyl(0.22, 0.28, 2.4, crownMat, 0, -0.4, 0, 8));
-    v.add(cone(0.3, 1.4, crownMat, 0, 1.5, 0, 8));
-    v.add(new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), gold));
-    v.children[2].position.y = 2.3;
-    crown.push(G.destruction.add(local(x, 2.0, z), qy, [0.28, 1.6, 0.28], { visual: v, ...copts }));
+    crown.push(G.destruction.add(local(x, 2.0, z), qy, [0.28, 1.6, 0.28], { visual: LM.crownPinnacleModel(), ...copts }));
   }
   // flying ribs from the corners to the lantern
   const lanternY = 4.4;
@@ -405,28 +350,13 @@ export function stGiles() {
     const len = a.distanceTo(b);
     const dir = b.clone().sub(a).normalize();
     const rq = qy.clone().multiply(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir));
-    const v = new THREE.Group();
-    v.add(bx(0.3, len, 0.3, crownMat));
-    for (let k = 0; k < 4; k++) v.add(cone(0.1, 0.3, crownMat, 0.18, -len / 2 + (k + 0.6) * (len / 4), 0, 4)); // crockets
-    crown.push(G.destruction.add(mid.applyQuaternion(qy).add(center), rq, [0.16, len / 2, 0.16], { visual: v, ...copts }));
+    const hl = Math.hypot(x, z);
+    crown.push(G.destruction.add(mid.applyQuaternion(qy).add(center), rq, [0.16, len / 2, 0.16], { visual: LM.crownRibModel(len, -x / hl, -z / hl), ...copts }));
   }
   // lantern + spire + weathercock
-  const lv = new THREE.Group();
-  lv.add(bx(1.4, 2.0, 1.4, crownMat));
-  for (const r of [0, Math.PI / 2]) {
-    const o = bx(0.5, 1.2, 1.42, M.black(), 0, 0, 0);
-    o.rotation.y = r;
-    lv.add(o);
-  }
-  const lantern = G.destruction.add(local(0, lanternY + 1.0, 0), qy, [0.7, 1.0, 0.7], { visual: lv, ...copts, points: 400 });
+  const lantern = G.destruction.add(local(0, lanternY + 1.0, 0), qy, [0.7, 1.0, 0.7], { visual: LM.crownLanternModel(), ...copts, points: 400 });
   crown.push(lantern);
-  const sv = new THREE.Group();
-  sv.add(cone(0.55, 3.2, crownMat, 0, 0, 0, 8));
-  sv.add(new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), gold));
-  sv.children[1].position.y = 1.7;
-  const cock = bx(0.5, 0.35, 0.06, gold, 0, 2.05, 0);
-  sv.add(cock);
-  crown.push(G.destruction.add(local(0, lanternY + 3.6, 0), qy, [0.5, 1.6, 0.5], { visual: sv, ...copts, points: 400 }));
+  crown.push(G.destruction.add(local(0, lanternY + 3.6, 0), qy, [0.5, 1.6, 0.5], { visual: LM.crownSpireModel(), ...copts, points: 400 }));
 
   const fall = once(() => {
     const toStreet = right(towerS).multiplyScalar(-1).add(forward(towerS).multiplyScalar(0.35)).normalize();

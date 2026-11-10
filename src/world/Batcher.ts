@@ -112,6 +112,7 @@ export function bake(scene: THREE.Scene, chunk = 90) {
     const transparent = (mat as any).transparent;
     m.castShadow = !transparent;
     m.receiveShadow = true;
+    m.userData.batch = true;
     scene.add(m);
     n++;
   }

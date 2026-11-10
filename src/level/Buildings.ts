@@ -5,6 +5,8 @@ import { addStatic } from '../world/Batcher';
 import { M, color } from '../art/Materials';
 import { facadeTex, shopTex, signTex, SHOP_NAMES, rng } from '../art/Textures';
 import { shopWindow } from '../art/Interiors';
+import { ball, cyl, lathe, Parts, pipe, q, rbox, V3 } from '../art/Model';
+import { FINE, UNIT, dressed, gable, moulding, roof, sbox } from '../art/Architecture';
 import { HALF_STREET, BAYS, BAY_T, baseH, theta, toWorld, toRoad, L, roadGroup, right, edgeL, edgeR, forward } from '../world/Road';
 
 export interface Reserved {
@@ -42,6 +44,28 @@ export function staticBox(s: number, u: number, yCenterAbs: number, halfAcross: 
 }
 
 let shopIdx = 0;
+const SHOP_PAINTS = ['#1e3d2f', '#5a1420', '#14284a', '#1c1c1c', '#3d2a5a', '#0f4a4a', '#6a3a12']; // as shopTex picks them
+const AWNINGS = ['#8e1c1c', '#1d5c3a', '#1b4f9c'];
+let potGeo: THREE.BufferGeometry | null = null;
+/** A clay chimney can. */
+const pot = () => (potGeo ??= lathe([[0.16, 0], [0.13, 0.1], [0.105, 0.5], [0.14, 0.54], [0.14, 0.6], [0.0001, 0.6]], q(8, 5), { cap: 'none' }));
+
+/** A slated roof with a gable at each end over a block `depth` x `width`, its wallhead at `y`. */
+export function roofOver(p: Parts, stone: THREE.Material, depth: number, width: number, y: number, stepped: boolean, pitch = 0.4) {
+  const rise = depth * pitch;
+  p.add(roof(depth + 0.5, rise, width, { ends: false }), M.slate(), [0, y + 0.3, 0]);
+  for (const sz of [-1, 1]) p.add(gable(depth + 0.3, rise, 0.45, stepped, 0.65), stone, [0, y, sz * (width / 2 - 0.225)]);
+  return rise;
+}
+
+/** A chimney stack across the ridge at `z`, with a cope and a row of cans. */
+export function chimney(p: Parts, stone: THREE.Material, cope: THREE.Material, ridge: number, z: number, pots = 4, x = 0) {
+  const top = ridge + 1.8, bot = ridge - 1.3;
+  p.add(sbox(1.1, top - bot, 1.9), stone, [x, (top + bot) / 2, z]);
+  p.add(UNIT, cope, [x, top + 0.09, z], null, [1.3, 0.18, 2.1]);
+  const clay = color(0xa8552e, 0.9);
+  for (let k = 0; k < pots; k++) p.add(pot(), clay, [x, top + 0.18, z + (k - (pots - 1) / 2) * 0.44], null, null, 0.85 + (k % 2) * 0.2);
+}
 
 /** One tenement land. Returns its group. */
 export function tenement(s0: number, width: number, side: 1 | -1, height: number, seed: number, forcedName?: string, front = HALF_STREET, tint?: number, depthIn = 10) {
@@ -55,20 +79,32 @@ export function tenement(s0: number, width: number, side: 1 | -1, height: number
   const g = roadGroup(sc, u, 0);
   g.position.y = ground;
   const hTotal = height + 0.6;
+  const f = side > 0 ? 1 : -1; // local x of the street face (+X is local left, -u)
+  const X = (f * depth) / 2;
+  const mirror: V3 = [f, 1, 1];
+  const groundLocal = baseH(sc) + 0.14 - ground;
 
   const hue = 26 + Math.floor(r() * 4) * 4;
   const light = 40 + Math.floor(r() * 4) * 5;
   const [fmap, femit] = facadeTex(hue, light, 1 + Math.floor(r() * 3));
+  // the painted front is 4 bays x 4 storeys a tile: fit whole bays across the land, and whole
+  // storeys between the top of the shop and the wallhead, so no window is cut by an edge
+  const y0 = Math.min(groundLocal + 3.75, hTotal - 2.2);
+  const nf = Math.max(1, Math.round((hTotal - y0) / 3.2)), fh = (hTotal - y0) / nf;
+  const nb = Math.max(1, Math.round(width / 3)), bw = width / nb;
   const map = fmap.clone();
-  map.repeat.set(width / 12, hTotal / 12.8);
+  map.repeat.set(nb / 4, hTotal / (4 * fh));
+  map.offset.set(0, 1 - ((y0 / (4 * fh)) % 1));
   map.needsUpdate = true;
   const em = femit.clone();
   em.repeat.copy(map.repeat);
+  em.offset.copy(map.offset);
   em.needsUpdate = true;
   const facade = new THREE.MeshStandardMaterial({ map, emissiveMap: em, emissive: 0xffffff, emissiveIntensity: 0.85, roughness: 0.9 });
   if (tint !== undefined) facade.color.setHex(tint);
   const plain = M.stone(hue, light - 6, 3, width / 8, hTotal / 8);
-  const roofMat = M.slate();
+  const stone = M.stone(hue, light - 6, 3); // the same stone, for pieces laid out in metres
+  const trim = dressed(hue, light + 7, tint), trimLo = dressed(hue, light - 5, tint);
   // +X face is local left (-u). The face pointing at the road is +X for right-side buildings.
   const mats = side > 0 ? [facade, plain, plain, plain, plain, plain] : [plain, facade, plain, plain, plain, plain];
   const box = new THREE.Mesh(new THREE.BoxGeometry(depth, hTotal, width), mats);
@@ -77,39 +113,69 @@ export function tenement(s0: number, width: number, side: 1 | -1, height: number
   box.receiveShadow = true;
   g.add(box);
 
-  // pitched slate roof (a box turned 45° makes a ridge)
-  const rw = depth / Math.SQRT2;
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(rw, rw, width + 0.2), roofMat);
-  roof.rotation.z = Math.PI / 4;
-  roof.position.y = hTotal;
-  roof.castShadow = true;
-  g.add(roof);
+  const p = new Parts();
+  // slates between two gables (crow-stepped on the older lands), a cornice along the wallhead
+  const stepped = r() < 0.4;
+  const rise = roofOver(p, stone, depth, width, hTotal, stepped);
+  const ridge = hTotal + 0.3 + rise;
+  p.add(moulding(width, 0.32, 0.42), trim, [X, hTotal - 0.42, 0], null, mirror);
+  p.add(UNIT, trimLo, [X - f * 0.06, hTotal + 0.16, 0], null, [0.3, 0.32, width]);
+  // the ground floor is plain stone either side of the shop
+  p.add(sbox(0.14, y0, width), stone, [X + f * 0.07, y0 / 2, 0]);
+  p.add(UNIT, trim, [X + f * 0.1, y0 + 0.06, 0], null, [0.2, 0.12, width]);
 
-  // crow-stepped gable facing the street on some lands
-  if (r() < 0.35) {
-    const gw = Math.min(width - 1, 7);
-    const face = side > 0 ? 1 : -1; // local x of the street-facing side
-    for (let i = 0; i < 5; i++) {
-      const w2 = gw * (1 - i / 5);
-      const step = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, w2), M.stone(hue, light, 2, w2 / 6, 0.2));
-      step.position.set(face * (depth / 2 - 0.35), hTotal + 0.45 + i * 0.9, 0);
-      step.castShadow = true;
-      g.add(step);
+  // chimney stacks on the gables, with their cans
+  const nCh = 1 + Math.floor(r() * 3);
+  const end = Math.max(0, width / 2 - 1.0);
+  const stacks = nCh === 1 ? [(r() < 0.5 ? -1 : 1) * end] : nCh === 2 || width < 9 ? [-end, end] : [-end, 0, end];
+  for (const z of stacks) chimney(p, stone, trim, ridge, z, FINE ? 4 : 3);
+
+  // on the roof: a crow-stepped gable to the street on some lands, dormers on others
+  const top = r();
+  const pane = color(0x1e2a33, 0.2, 0.4);
+  if (top < 0.3 && width > 5.5) {
+    const gw = Math.min(width - 1.6, 6.4), gr = Math.min(gw * 0.6, rise * 0.92), wh = Math.min(1.5, gr * 0.5);
+    p.add(gable(gw, gr, 0.5, true, 0.25), stone, [X - f * 0.25, hTotal, 0], [0, Math.PI / 2, 0]);
+    p.add(roof(gw - 0.2, gr, depth / 2 + 0.3, { ends: false }), M.slate(), [X / 2 - f * 0.1, hTotal + 0.3, 0], [0, Math.PI / 2, 0]);
+    p.add(UNIT, pane, [X + f * 0.005, hTotal + gr * 0.42, 0], null, [0.05, wh, 0.9]);
+    p.add(UNIT, trim, [X + f * 0.05, hTotal + gr * 0.42 - wh / 2 - 0.06, 0], null, [0.14, 0.1, 1.2]);
+  } else if (top < 0.62 && width > 6.5) {
+    const n = width > 11 ? 3 : 2;
+    const leadGrey = color(0x4a5158, 0.6, 0.3);
+    for (let i = 0; i < n; i++) {
+      const z = ((i + 0.5) / n - 0.5) * width * 0.86;
+      p.add(UNIT, leadGrey, [X - f * 1.5, hTotal + 1.1, z], null, [1.9, 1.6, 1.3]);
+      p.add(UNIT, trim, [X - f * 0.56, hTotal + 1.1, z], null, [0.1, 1.6, 1.4]);
+      p.add(UNIT, pane, [X - f * 0.5, hTotal + 1.2, z], null, [0.05, 1.0, 0.8]);
+      p.add(roof(1.7, 0.6, 2.2), M.slate(), [X - f * 1.5, hTotal + 1.9, z], [0, Math.PI / 2, 0]);
     }
   }
-  // chimney stacks with pots
-  const nCh = 1 + Math.floor(r() * 3);
-  for (let i = 0; i < nCh; i++) {
-    const z = (-0.4 + (0.8 * (i + 0.5)) / nCh) * width;
-    const ch = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.6, 2.2), M.stone(hue, light - 8, 4));
-    ch.position.set((r() - 0.5) * 2, hTotal + 2.1, z);
-    ch.castShadow = true;
-    g.add(ch);
-    for (let k = 0; k < 4; k++) {
-      const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.16, 0.6, 8), color(0xa8552e, 0.9));
-      pot.position.set(ch.position.x, hTotal + 3.7, z - 0.75 + k * 0.5);
-      g.add(pot);
+
+  // stone dressings picked out in relief where the painted front has them (desktop only)
+  if (FINE) {
+    const ww = (50 / 128) * bw, hooded = r() < 0.55;
+    for (let k = 0; k < nf; k++) {
+      const yf = y0 + k * fh;
+      if (k > 0) p.add(UNIT, trimLo, [X + f * 0.04, yf + 0.045 * fh, 0], null, [0.08, 0.05 * fh, width]);
+      for (let b = 0; b < nb; b++) {
+        const z = -width / 2 + (b + 0.5) * bw;
+        p.add(UNIT, trimLo, [X + f * 0.08, yf + 0.172 * fh, z], null, [0.16, 0.05 * fh, ww * 1.42]);
+        if (hooded) p.add(UNIT, trim, [X + f * 0.06, yf + 0.935 * fh, z], null, [0.12, 0.04 * fh, ww * 1.42]);
+      }
     }
+    if (r() < 0.5) {
+      // rusticated quoins up both corners
+      let i = 0;
+      for (let y = y0 + 0.25; y < hTotal - 0.9; y += 0.62, i++) {
+        const w = i % 2 ? 0.48 : 0.8;
+        for (const sz of [-1, 1]) p.add(UNIT, trim, [X + f * 0.035, y + 0.2, sz * (width / 2 - w / 2)], null, [0.07, 0.42, w]);
+      }
+    }
+    // a cast-iron downpipe and its hopper
+    const iron = color(0x1d2226, 0.5, 0.6);
+    const pz = (r() < 0.5 ? -1 : 1) * (width / 2 - 0.22);
+    p.add(cyl(0.06, 0.06, hTotal - 0.5 - groundLocal, 6), iron, [X + f * 0.1, (hTotal - 0.5 + groundLocal) / 2, pz]);
+    p.add(UNIT, iron, [X + f * 0.12, hTotal - 0.55, pz], null, [0.22, 0.24, 0.26]);
   }
 
   // ground floor shopfront
@@ -123,37 +189,54 @@ export function tenement(s0: number, width: number, side: 1 | -1, height: number
   const shopFrame = color(0x222222, 0.6);
   const shopMats = side > 0 ? [shopMat, shopFrame, shopFrame, shopFrame, shopFrame, shopFrame] : [shopFrame, shopMat, shopFrame, shopFrame, shopFrame, shopFrame];
   const shop = new THREE.Mesh(new THREE.BoxGeometry(0.3, 3.6, shopW), shopMats);
-  const groundLocal = baseH(sc) + 0.14 - ground;
-  shop.position.set((side > 0 ? 1 : -1) * (depth / 2 + 0.1), groundLocal + 1.8, 0);
+  shop.position.set(f * (depth / 2 + 0.1), groundLocal + 1.8, 0);
   shop.receiveShadow = true;
   g.add(shop);
-  // a real room behind the shop window (interior-mapped), laid over the window painted in shopTex:
-  // that texture puts the door left or right (its second random number) and the glass 80-220 px down
+  // shopTex picks its paint with its first random number and puts the door left or right with its
+  // second; the glass is 80-220 px down
+  const rr = rng(seed);
+  const paintHex = new THREE.Color(SHOP_PAINTS[Math.floor(rr() * SHOP_PAINTS.length)]);
+  const doorLeft = rr() < 0.5;
+  // a real room behind the shop window (interior-mapped), laid over the window painted in shopTex
   {
-    const rr = rng(seed);
-    rr();
-    const doorLeft = rr() < 0.5;
     const [a, b] = doorLeft ? [136, 488] : [24, 376];
     const ww = ((b - a) / 512) * shopW, wh = ((220 - 80) / 256) * 3.6;
     const uc = (a + b) / 2 / 512;
     const zc = side > 0 ? shopW / 2 - uc * shopW : -shopW / 2 + uc * shopW;
     const win = shopWindow(ww, wh);
-    win.position.set((side > 0 ? 1 : -1) * (depth / 2 + 0.262), groundLocal + ((256 - 220) / 256) * 3.6, zc);
+    win.position.set(f * (depth / 2 + 0.262), groundLocal + ((256 - 220) / 256) * 3.6, zc);
     win.rotation.y = side > 0 ? Math.PI / 2 : -Math.PI / 2;
     g.add(win);
+  }
+  // the shopfront's joinery: pilasters, console brackets and a cornice over the fascia
+  const SX = X + f * 0.25;
+  const paint = color(paintHex.getHex(), 0.55), paintLo = color(paintHex.clone().multiplyScalar(0.6).getHex(), 0.55);
+  for (const sz of [-1, 1]) {
+    const z = sz * (shopW / 2 - 0.06);
+    p.add(UNIT, paint, [SX + f * 0.04, groundLocal + 1.8, z], null, [0.12, 3.6, 0.3]);
+    p.add(UNIT, paintLo, [SX + f * 0.06, groundLocal + 0.2, z], null, [0.17, 0.4, 0.36]);
+    if (FINE) p.add(rbox(0.3, 0.46, 0.3, 0.08, 1), paintLo, [SX + f * 0.12, groundLocal + 3.3, z]);
+  }
+  p.add(moulding(shopW + 0.5, 0.36, 0.2), paintLo, [SX, groundLocal + 3.58, 0], null, mirror);
+  if (r() < 0.18 && shopW > 4) {
+    // a striped awning out over the pavement
+    p.add(new THREE.BoxGeometry(1.5, 0.04, shopW - 0.9), M.stripes(AWNINGS[Math.floor(r() * AWNINGS.length)], '#f4ecd8'), [SX + f * 0.72, groundLocal + 2.56, 0], [0, 0, -f * 0.3]);
+    for (const sz of [-1, 1]) p.add(cyl(0.015, 0.015, 1.5, 4), M.metal(), [SX + f * 0.72, groundLocal + 2.54, sz * (shopW / 2 - 0.47)], [0, 0, Math.PI / 2 - f * 0.3]);
   }
 
   // projecting hanging sign now and again
   if (r() < 0.3) {
-    const bracket = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.06, 0.06), M.black());
-    const bx = (side > 0 ? 1 : -1) * (depth / 2 + 0.7);
-    bracket.position.set(bx, groundLocal + 4.4, -shopW / 2 + 1);
-    g.add(bracket);
+    const bxs = f * (depth / 2 + 0.7), bz = -shopW / 2 + 1;
+    const iron = M.black();
+    p.add(UNIT, iron, [bxs, groundLocal + 4.4, bz], null, [1.4, 0.05, 0.05]);
+    p.add(pipe([[bxs - f * 0.68, groundLocal + 3.75, bz], [bxs - f * 0.5, groundLocal + 4.2, bz], [bxs + f * 0.1, groundLocal + 4.38, bz]], 0.018, { curve: true, seg: 4, steps: 3 }), iron);
+    p.add(ball(0.05, 6), iron, [bxs + f * 0.72, groundLocal + 4.4, bz]);
     const sm = new THREE.MeshStandardMaterial({ map: signTex([name.split(' ')[0], '★'], '#5a1420', '#e8c45a', 128, 128, 'Georgia') });
     const sign = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.06), [M.black(), M.black(), M.black(), M.black(), sm, sm]);
-    sign.position.set(bx + (side > 0 ? 0.15 : -0.15), groundLocal + 3.85, -shopW / 2 + 1);
+    sign.position.set(bxs + f * 0.15, groundLocal + 3.85, bz);
     g.add(sign);
   }
+  p.build(g);
   addStatic(g);
   // no collider here: the smooth guide rail along the building line does the job without corners
   return g;
