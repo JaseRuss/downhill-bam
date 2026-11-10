@@ -18,6 +18,8 @@ export class HUD {
   popups = $('popups');
   bamEl = $('bam');
   fps = $('fps');
+  tracker = $('tracker');
+  private trackTimer = 0;
   private pops: Pop[] = [];
   private bamTimer = 0;
   private marks: { el: HTMLElement; s: number }[] = [];
@@ -81,6 +83,15 @@ export class HUD {
     this.pops.splice(i, 1);
   }
 
+  /** The side-objective tracker: slides in at the side, shows the bar, fades after a few seconds. */
+  track(name: string, how: string, cur: number, max: number) {
+    const done = cur >= max;
+    this.tracker.innerHTML = `<small>${done ? 'KIT BAG · UNLOCKED!' : 'KIT BAG'}</small><b>${name}</b><span>${how}</span><div class="meter"><div style="width:${(cur / max) * 100}%"></div></div><i>${cur} / ${max}</i>`;
+    this.tracker.classList.toggle('done', done);
+    this.tracker.classList.add('show');
+    this.trackTimer = done ? 5 : 3.5;
+  }
+
   bam(text = 'BAM!') {
     this.bamEl.textContent = text;
     this.bamEl.classList.add('show');
@@ -111,6 +122,10 @@ export class HUD {
       const sc = p.t < 0.12 ? 0.6 + p.t * 4 : 1;
       p.el.style.transform = `translate(-50%,-50%) scale(${sc})`;
     }
+    if (this.trackTimer > 0) {
+      this.trackTimer -= dt;
+      if (this.trackTimer <= 0) this.tracker.classList.remove('show');
+    }
     if (this.bamTimer > 0) {
       this.bamTimer -= dt;
       if (this.bamTimer <= 0) this.bamEl.classList.remove('show');
@@ -120,5 +135,7 @@ export class HUD {
   clear() {
     while (this.pops.length) this.killPop(0);
     this.bamEl.classList.remove('show');
+    this.tracker.classList.remove('show');
+    this.trackTimer = 0;
   }
 }

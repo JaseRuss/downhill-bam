@@ -23,7 +23,7 @@ import { Backdrop, HAAR } from '../world/Backdrop';
 import { initInteriors } from '../art/Interiors';
 import { makeEnv } from '../art/Materials';
 import { policeTally, resetWanted } from '../props/Homages';
-import { Cosmetic, COSMETICS, SLOTS } from './Cosmetics';
+import { addRun, Cosmetic, COSMETICS, RunTally, SLOTS } from './Cosmetics';
 import { MobileUI } from '../ui/MobileUI';
 import { QUALITY, CAM } from '../core/Platform';
 import { FINISH_S, START_S, toWorld, theta, edgeL, edgeR, baseH } from '../world/Road';
@@ -70,6 +70,9 @@ export class Game {
   private swapTo: VehicleId | null = null;
   tier = 1;
   state: State = 'title';
+  /** The live objective tracker: how far each one had got when last looked at. */
+  private trackSeen = new Map<string, number>();
+  private trackT = 0;
   stateT = 0;
   tourIdx = 0;
   aimOffset = 0;
@@ -230,6 +233,8 @@ export class Game {
     this.aimOffset = 0;
     this.finished = false;
     this.recorded = false;
+    this.trackSeen.clear();
+    for (const [k, [cur]] of this.kitProgress()) this.trackSeen.set(k.id, cur);
     this.sideView = false;
     this.stopT = this.runT = this.finishT = this.splashT = 0;
     this.splashAt = null;
@@ -249,6 +254,8 @@ export class Game {
   }
 
   teardown() {
+    // bailing out of a run part-way: what the tracker showed him earning is kept
+    if (!this.recorded && (this.state === 'run' || this.state === 'ending')) this.career.bankTally(this.runTally());
     this.hud.clear();
     $('derby').style.display = 'none';
     this.sfx.engineHum(false, 0);
@@ -539,6 +546,45 @@ export class Game {
     }
   }
 
+  /** What this run has done so far for the side objectives. */
+  runTally(): RunTally {
+    const downs: Record<string, number> = {};
+    for (const p of G.crowd.tourists) if (p.scored) downs[p.type] = (downs[p.type] ?? 0) + 1;
+    return {
+      downs, police: policeTally(), splash: G.trolley.splashed, ejects: G.trolley.ejectCount,
+      flocks: G.crowd.flocks.filter((f) => f.scored).length,
+      // scaring birds, hopping and picking up cans don't count as damage
+      clean: this.finished && [...G.scoring.log.keys()].every((l) => HARMLESS.has(l)),
+    };
+  }
+
+  /** How far along each locked side objective is, counting the run in progress. */
+  private kitProgress() {
+    const c = this.career;
+    const out = new Map<Cosmetic, [number, number]>();
+    if (!c.kitOpen) return out;
+    const t = addRun(c.data.tally, this.runTally());
+    for (const k of COSMETICS) {
+      if (c.data.cosmetics.includes(k.id)) continue;
+      const [cur, max] = k.progress(t);
+      out.set(k, [Math.min(cur, max), max]);
+    }
+    return out;
+  }
+
+  /** Mid-run: pop the tracker up for whichever objective has just moved on. */
+  private trackKit(dt: number) {
+    this.trackT -= dt;
+    if (this.trackT > 0) return;
+    this.trackT = 0.2;
+    let latest: [Cosmetic, number, number] | null = null;
+    for (const [k, [cur, max]] of this.kitProgress()) {
+      if (cur > (this.trackSeen.get(k.id) ?? 0)) latest = [k, cur, max];
+      this.trackSeen.set(k.id, cur);
+    }
+    if (latest) this.hud.track(latest[0].name, latest[0].how, latest[1], latest[2]);
+  }
+
   showResults() {
     this.setState('results');
     this.hud.showRunHud(false);
@@ -549,14 +595,7 @@ export class Game {
     let res = { newly: [] as Goal[], record: false, prevBest: 0, extras: [] as Cosmetic[], kitOpened: false };
     if (!this.recorded) {
       this.recorded = true;
-      const downs: Record<string, number> = {};
-      for (const p of G.crowd.tourists) if (p.scored) downs[p.type] = (downs[p.type] ?? 0) + 1;
-      res = c.record({ score: sc.score, tier: this.tier, finished: this.finished, splash: t.splashed, tally: {
-        downs, police: policeTally(), splash: t.splashed, ejects: t.ejectCount,
-        flocks: G.crowd.flocks.filter((f) => f.scored).length,
-        // scaring birds, hopping and picking up cans don't count as damage
-        clean: this.finished && [...sc.log.keys()].every((l) => HARMLESS.has(l)),
-      } });
+      res = c.record({ score: sc.score, tier: this.tier, finished: this.finished, splash: t.splashed, tally: this.runTally() });
     }
     const best = c.bestFor(this.tier);
     const rows = sc.invoice();
@@ -870,6 +909,7 @@ export class Game {
     this.sun.target.position.copy(focus);
     this.sun.position.copy(focus).add(new THREE.Vector3(-22, 48, -26));
 
+    if (this.state === 'run' || this.state === 'ending') this.trackKit(dt);
     this.hud.update(dt);
     this.commentary.update(dt);
     this.input.endFrame();

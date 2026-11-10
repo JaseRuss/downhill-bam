@@ -115,5 +115,18 @@ export const freshTally = (): Tally => ({
   piper: 0, mime: 0, ghost: 0, influencer: 0, clean: 0, ejects: 0, splashes: 0, flocks: 0,
 });
 
+/** A tally with one run's numbers added (the original is left alone). */
+export function addRun(t: Tally, r: RunTally): Tally {
+  const out = { ...t };
+  for (const k of CROWD_KEYS) out[k] += r.downs[k] ?? 0;
+  const [hit, total] = r.police;
+  if (total > 0 && hit >= total) out.cleanSweeps++;
+  if (r.clean) out.clean++;
+  if (r.splash) out.splashes++;
+  out.ejects += r.ejects;
+  out.flocks += r.flocks;
+  return out;
+}
+
 /** What's currently equipped; the career keeps this in step with the save. */
 export const LOOK: Partial<Record<Slot, string>> = {};

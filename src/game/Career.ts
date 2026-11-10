@@ -1,5 +1,5 @@
 import type { VehicleId } from '../vehicle/Vehicles';
-import { Cosmetic, COSMETICS, CROWD_KEYS, freshTally, LOOK, RunTally, Slot, Tally } from './Cosmetics';
+import { addRun, Cosmetic, COSMETICS, freshTally, LOOK, RunTally, Slot, Tally } from './Cosmetics';
 
 /**
  * Persistent progress, kept in localStorage: the career points bank, best scores, which stretch of
@@ -191,26 +191,31 @@ export class Career {
     }
     // side objectives: any order, and they keep counting whatever stage you're on
     // (nothing counts until the kit bag is open; the run that opens it does)
+    const extras = run.tally ? this.addTally(run.tally) : [];
+    this.save();
+    return { newly, record, prevBest, extras, kitOpened: !wasOpen && this.kitOpen };
+  }
+
+  /** Count a run's numbers towards the side objectives. Returns anything that unlocks. */
+  private addTally(run: RunTally) {
+    const d = this.data;
     const extras: Cosmetic[] = [];
-    if (run.tally && this.kitOpen) {
-      const t = d.tally;
-      for (const k of CROWD_KEYS) t[k] += run.tally.downs[k] ?? 0;
-      const [hit, total] = run.tally.police;
-      if (total > 0 && hit >= total) t.cleanSweeps++;
-      if (run.tally.clean) t.clean++;
-      if (run.tally.splash) t.splashes++;
-      t.ejects += run.tally.ejects;
-      t.flocks += run.tally.flocks;
-    }
-    for (const c of this.kitOpen ? COSMETICS : []) {
+    if (!this.kitOpen) return extras;
+    d.tally = addRun(d.tally, run);
+    for (const c of COSMETICS) {
       if (d.cosmetics.includes(c.id)) continue;
       const [cur, max] = c.progress(d.tally);
       if (cur < max) continue;
       d.cosmetics.push(c.id);
       extras.push(c);
     }
+    return extras;
+  }
+
+  /** A run abandoned part-way (restart, back to the garage): what it did for the side objectives still counts. */
+  bankTally(run: RunTally) {
+    this.addTally(run);
     this.save();
-    return { newly, record, prevBest, extras, kitOpened: !wasOpen && this.kitOpen };
   }
 
   reset() {

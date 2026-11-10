@@ -28,6 +28,20 @@
     #wanted small { display: block; font-size: 13px; color: #fff; letter-spacing: 3px; }
     #wanted .off { color: rgba(255,255,255,.25); }
     #wanted.bump { animation: pop .4s cubic-bezier(.3,1.8,.6,1); }
+    #tracker { top: 168px; right: 22px; width: 230px; background: rgba(20,18,16,.82); border: 3px solid var(--gold); border-radius: 12px; padding: 8px 12px 9px; text-shadow: none; opacity: 0; transform: translateX(24px); transition: opacity .5s, transform .5s; }
+    #tracker.show { opacity: 1; transform: none; transition: opacity .2s, transform .2s cubic-bezier(.3,1.6,.6,1); }
+    #tracker small { display: block; font-size: 11px; letter-spacing: 2px; color: var(--gold); }
+    #tracker b { display: block; font-size: 18px; font-weight: normal; line-height: 1.15; }
+    #tracker span { display: block; font-family: 'Special Elite', monospace; font-size: 12px; opacity: .85; line-height: 1.25; margin-top: 1px; }
+    #tracker .meter div { transition: width .3s; }
+    #tracker i { display: block; font-style: normal; font-family: 'Special Elite', monospace; font-size: 12px; text-align: right; margin-top: 2px; }
+    #tracker.done { background: var(--gold); color: #000; border-color: #000; }
+    #tracker.done small { color: #000; }
+    #tracker.done .meter { background: rgba(0,0,0,.25); }
+    #tracker.done .meter div { background: #000; }
+    body.mobile #tracker { top: 98px; right: calc(14px + env(safe-area-inset-right)); width: 170px; padding: 5px 9px 6px; border-width: 2px; }
+    body.mobile #tracker b { font-size: 14px; }
+    body.mobile #tracker span { font-size: 10px; }
     #progress { top: 18px; left: 50%; transform: translateX(-50%); width: min(46vw, 560px); height: 10px; background: rgba(0,0,0,.35); border-radius: 6px; border: 2px solid rgba(255,255,255,.6); }
     #progress .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--gold); border-radius: 4px; }
     #progress .mark { position: absolute; top: -6px; width: 4px; height: 18px; background: #fff; border-radius: 2px; }
@@ -207,6 +221,7 @@
   <div id="intro" class="hud"><div class="num"></div><h2></h2><div class="pts"></div><p></p></div>
   <div id="skip" class="hud">SPACE / CLICK to skip the tour ▸</div>
   <div id="derby" class="hud"></div>
+  <div id="tracker" class="hud"></div>
   <div id="fps" class="hud"></div>
 
   <div id="title" class="screen">
