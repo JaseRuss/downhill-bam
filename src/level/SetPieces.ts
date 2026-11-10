@@ -9,6 +9,7 @@ import { staticBox, tenement } from './Buildings';
 import { barrel, barrier, hatCone, haggis, scaffold, yawQ, aBoard, communalBin, lampPost, bollard, bench, cone as coneProp } from '../props/Props';
 import type { Part } from '../destruction/Destruction';
 import { buildHuman } from '../art/Humanoid';
+import { cyl as mcyl, lathe, loft, model, Parts, q as mq, rbox } from '../art/Model';
 
 // ---------- helpers ----------
 function bx(w: number, h: number, d: number, mat: THREE.Material | THREE.Material[], x = 0, y = 0, z = 0) {
@@ -253,15 +254,23 @@ export function whiskyPyramid(s: number, u: number) {
 // 2. The Piper & the Tartan Tat Emporium
 // =====================================================================
 function mannequin(s: number, u: number, tartan: 'red' | 'green' | 'blue' | 'dress') {
-  const g = new THREE.Group();
-  g.add(bx(0.36, 0.55, 0.22, M.white(), 0, 0.35, 0));
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), M.white());
-  head.scale.y = 1.3;
-  head.position.y = 0.82;
-  g.add(head);
-  g.add(cyl(0.2, 0.3, 0.42, M.tartan(tartan), 0, -0.1, 0));
-  g.add(cyl(0.03, 0.03, 0.7, M.metal(), 0, -0.6, 0, 6));
-  g.add(cyl(0.2, 0.2, 0.04, M.metal(), 0, -0.95, 0));
+  // a tailor's dummy on a stand, in a wee pleated kilt
+  const g = model(`mannequin|${tartan}`, () => {
+    const p = new Parts();
+    const linen = color(0xe8e0cf, 0.9), wood = color(0x6b4a2a, 0.6), iron = M.metal();
+    p.add(loft([
+      { t: 0.06, w: 0.15, d: [0.1, 0.11] }, { t: 0.2, w: 0.13, d: [0.095, 0.09] }, { t: 0.42, w: 0.17, d: [0.12, 0.1] },
+      { t: 0.56, w: 0.19, d: [0.1, 0.1] }, { t: 0.63, w: 0.12, d: [0.07, 0.075] }, { t: 0.68, w: 0.05, d: 0.05 },
+    ], { seg: mq(16, 8), sub: 1, n: 2.3 }), linen);
+    p.add(lathe([[0.05, 0.68], [0.045, 0.74], [0.02, 0.76], [0.03, 0.79], [0.0001, 0.8]], mq(10, 6), { cap: 'none' }), wood);
+    const seg = mq(40, 16) & ~1;
+    const pleats = (a: number, v: number) => (Math.abs(a > Math.PI ? a - Math.PI * 2 : a) < 0.9 ? 1 : 1 + (Math.round((a / (Math.PI * 2)) * seg) % 2 ? 0.035 : -0.035) * (1 - v * 0.7));
+    p.add(loft([{ t: -0.34, w: 0.26, d: [0.2, 0.22] }, { t: -0.1, w: 0.2, d: [0.15, 0.16] }, { t: 0.1, w: 0.155, d: [0.105, 0.115] }], { seg, cap: 'none', uv: [2, 0.5], mod: pleats, crease: 40 }), M.tartan(tartan));
+    p.add(loft([{ t: 0.08, w: 0.16, d: [0.11, 0.12] }, { t: 0.115, w: 0.158, d: [0.108, 0.118] }], { seg: mq(16, 8), n: 2.3 }), color(0x1a1410, 0.5));
+    p.add(mcyl(0.018, 0.018, 0.62, 6), iron, [0, -0.6, 0]);
+    p.add(lathe([[0.22, -0.95], [0.22, -0.93], [0.05, -0.9], [0.03, -0.86]], mq(14, 8), { cap: 'none' }), iron);
+    return p.build();
+  });
   return G.destruction.add(toWorld(s, u, 0.98), theta(s), [0.2, 0.97, 0.15], {
     visual: g, dynamic: true, density: 60, points: 120, label: 'Mannequin', sound: 'soft', restitution: 0.3,
   });
@@ -758,12 +767,14 @@ function phoneBox(s: number, u: number) {
   for (const [x, z] of [[-0.48, -0.48], [0.48, -0.48], [-0.48, 0.48], [0.48, 0.48]]) {
     posts.push(G.destruction.add(off(x, 1.25, z), qy, [0.06, 1.25, 0.06], { mat: red, density: 2000, release: 30, sound: 'metal', points: 300, label: 'Phone Box', retain: 0.85 }));
   }
-  const rv = new THREE.Group();
-  rv.add(bx(1.1, 0.25, 1.1, red));
-  const dome = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.75, 0.3, 4, 1), red);
-  dome.rotation.y = Math.PI / 4;
-  dome.position.y = 0.27;
-  rv.add(dome);
+  // the roof: a shallow dome over a signboard frieze
+  const rv = model('phoneroof', () => {
+    const p = new Parts();
+    p.add(rbox(1.1, 0.25, 1.1, 0.02), red);
+    p.add(rbox(1.18, 0.05, 1.18, 0.02), red, [0, 0.13, 0]);
+    p.add(lathe([[0.76, 0.15], [0.72, 0.22], [0.56, 0.31], [0.3, 0.37], [0.0001, 0.39]], 4, { cap: 'none', sub: 1 }), red, null, [0, Math.PI / 4, 0]);
+    return p.build();
+  });
   const tel = mapMat(signTex(['TELEPHONE'], '#111', '#fff', 256, 48));
   for (let i = 0; i < 4; i++) {
     const p = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.15), tel);

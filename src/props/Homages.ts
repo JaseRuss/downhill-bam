@@ -4,6 +4,8 @@ import { M, color, mapMat } from '../art/Materials';
 import { canvas, signTex } from '../art/Textures';
 import { theta, toWorld, edgeL, edgeR } from '../world/Road';
 import { yawQ } from './Props';
+import { policeCarModel } from '../art/Motors';
+import { ball, cyl, extrude, lathe, model, Parts, pipe, q, rbox } from '../art/Model';
 
 /**
  * Nods to Edinburgh's (and Dundee's) games industry, without borrowing anyone's names or logos:
@@ -61,34 +63,11 @@ let bbMat: THREE.Material | null = null;
 /** A parked polis car: white, yellow-and-blue checks, a light bar that flashes. */
 export function policeCar(s: number, u: number, yawExtra = 0) {
   bbMat ??= battenburg();
-  const v = new THREE.Group();
-  const white = color(0xf4f4f2, 0.3, 0.3);
-  const box = (w: number, h: number, d: number, x: number, y: number, z: number, m: THREE.Material) => {
-    const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
-    b.position.set(x, y, z);
-    b.castShadow = true;
-    v.add(b);
-    return b;
-  };
-  box(4.2, 0.7, 1.8, 0, -0.15, 0, white);
-  box(2.3, 0.62, 1.66, -0.2, 0.5, 0, white);
-  box(2.2, 0.5, 1.68, -0.2, 0.5, 0, color(0x1d2630, 0.15, 0.5));
-  box(4.22, 0.22, 1.82, 0, -0.1, 0, bbMat);
-  for (const x of [-1.35, 1.35]) for (const z of [-0.88, 0.88]) {
-    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.24, 12), M.black());
-    w.rotation.x = Math.PI / 2;
-    w.position.set(x, -0.5, z);
-    v.add(w);
-  }
-  // the light bar: two blue lamps that take turns
-  const blueA = new THREE.MeshStandardMaterial({ color: 0x2a5bff, emissive: 0x2a5bff, emissiveIntensity: 2 });
-  const blueB = blueA.clone();
-  box(0.3, 0.12, 0.7, -0.2, 0.88, -0.36, blueA);
-  box(0.3, 0.12, 0.7, -0.2, 0.88, 0.36, blueB);
+  const { group: v, lamps: [blueA, blueB] } = policeCarModel(bbMat);
   const doors = mapMat(signTex(['POLIS'], '#f4f4f2', '#1b3f9c', 256, 64, 'Arial Black'));
-  for (const z of [-0.915, 0.915]) {
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.28), doors);
-    p.position.set(-0.3, 0.12, z);
+  for (const z of [-0.9, 0.9]) {
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.2), doors);
+    p.position.set(-0.25, 0.1, z);
     if (z < 0) p.rotation.y = Math.PI;
     v.add(p);
   }
@@ -112,23 +91,40 @@ export function policeCar(s: number, u: number, yawExtra = 0) {
 
 /** An old blue police box, Edinburgh style: a pillar of a thing with a lamp on top. */
 export function policeBox(s: number, u: number) {
-  const v = new THREE.Group();
-  const navy = color(0x14285e, 0.6);
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.3, 1.2), navy);
-  body.castShadow = true;
-  v.add(body);
-  const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.92, 0.45, 4), navy);
-  roof.rotation.y = Math.PI / 4;
-  roof.position.y = 1.37;
-  v.add(roof);
-  const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.22, 10), M.emissive(0xdde8ff, 1.5));
-  lamp.position.y = 1.7;
-  v.add(lamp);
+  const v = model('policebox', () => {
+    const p = new Parts();
+    const navy = color(0x14285e, 0.55), deep = color(0x0e1c45, 0.6), trim = color(0x1c3478, 0.5);
+    // plinth, body, a pilaster at each corner
+    p.add(rbox(1.3, 0.16, 1.3, 0.03, 1), deep, [0, -1.07, 0]);
+    p.add(rbox(1.12, 2.0, 1.12, 0.02, 1), navy, [0, -0.02, 0]);
+    for (const x of [-1, 1]) for (const z of [-1, 1]) {
+      p.add(rbox(0.16, 2.0, 0.16, 0.02, 1), trim, [x * 0.53, -0.02, z * 0.53]);
+      p.add(rbox(0.2, 0.08, 0.2, 0.02, 1), trim, [x * 0.53, 0.94, z * 0.53]);
+    }
+    // sunk panels on every face, with the saltire in the top ones
+    for (let k = 0; k < 4; k++) {
+      const face = new Parts();
+      for (const x of [-0.21, 0.21]) for (const [y, h] of [[-0.58, 0.72], [0.22, 0.6]]) {
+        face.add(rbox(0.34, h, 0.02, 0.008, 1), deep, [x, y, 0.565]);
+        if (y > 0) for (const a of [0.9, -0.9]) face.add(rbox(0.03, 0.5, 0.012, 0.004, 1), trim, [x, y, 0.578], [0, 0, a]);
+      }
+      p.sub(face, null, [0, (k * Math.PI) / 2, 0]);
+    }
+    p.add(ball(0.03, 8), color(0xc4c9cf, 0.28, 0.85), [0.585, -0.2, 0.06]);
+    // cornice, a shallow pitched roof, and the lamp in its cage
+    p.add(rbox(1.3, 0.1, 1.3, 0.02, 1), trim, [0, 1.03, 0]);
+    p.add(rbox(1.2, 0.08, 1.2, 0.02, 1), navy, [0, 1.11, 0]);
+    p.add(lathe([[0.86, 1.15], [0.22, 1.48], [0.16, 1.5], [0.16, 1.56]], 4, { cap: 'none' }), navy, null, [0, Math.PI / 4, 0]);
+    p.add(cyl(0.1, 0.1, 0.2, q(10, 6)), M.emissive(0xdde8ff, 1.5), [0, 1.66, 0]);
+    for (let k = 0; k < 4; k++) p.add(pipe([[Math.cos(k * 1.571) * 0.12, 1.56, Math.sin(k * 1.571) * 0.12], [Math.cos(k * 1.571) * 0.12, 1.74, Math.sin(k * 1.571) * 0.12], [0, 1.82, 0]], 0.012, { seg: 4, bend: 0.05 }), deep);
+    p.add(ball(0.03, 6), deep, [0, 1.83, 0]);
+    return p.build();
+  });
   const sign = mapMat(signTex(['POLIS'], '#0d1a40', '#ffffff', 256, 64, 'Arial Black'));
   for (let k = 0; k < 4; k++) {
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.22), sign);
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.16), sign);
     const a = (k * Math.PI) / 2;
-    p.position.set(Math.sin(a) * 0.605, 0.95, Math.cos(a) * 0.605);
+    p.position.set(Math.sin(a) * 0.582, 0.7, Math.cos(a) * 0.582);
     p.rotation.y = a;
     v.add(p);
   }
@@ -181,26 +177,41 @@ function screen() {
 
 /** A retro arcade cabinet out on the pavement. */
 export function arcadeCabinet(s: number, u: number) {
-  const v = new THREE.Group();
-  const body = color(0x2a1745, 0.5);
-  const add = (geo: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, rz = 0) => {
+  const v = model('arcade', () => {
+    const p = new Parts();
+    const body = color(0x2a1745, 0.5), black = color(0x0e0e10, 0.45), pink = color(0xff3bb0, 0.4);
+    // the classic profile: kick panel, control deck, a raked screen under a jutting marquee
+    const side: [number, number][] = [[-0.38, -0.95], [0.3, -0.95], [0.3, -0.16], [0.38, -0.1], [0.38, 0.0], [0.17, 0.1], [0.07, 0.72], [0.3, 0.76], [0.36, 0.95], [-0.38, 0.95]];
+    p.add(extrude(side, 0.8, 0.012), body);
+    // pink edging down both sides
+    for (const z of [-0.405, 0.405]) p.add(pipe(side.map(([x, y]): [number, number, number] => [x, y, z]), 0.012, { closed: true, seg: 4 }), pink);
+    // screen surround, control deck, stick and buttons
+    p.add(rbox(0.03, 0.66, 0.7, 0.01, 1), black, [0.108, 0.42, 0], [0, 0, 0.16]);
+    p.add(rbox(0.26, 0.03, 0.72, 0.01, 1), black, [0.28, 0.06, 0], [0, 0, -0.44]);
+    p.add(cyl(0.008, 0.008, 0.09, 6), color(0xc4c9cf, 0.28, 0.85), [0.27, 0.11, -0.16], [0, 0, -0.44]);
+    p.add(ball(0.03, q(10, 6)), color(0xd01020, 0.3), [0.29, 0.155, -0.16]);
+    [0xffd23f, 0x3bd1ff, 0x35d06a].forEach((c, i) => p.add(cyl(0.024, 0.024, 0.016, q(10, 6)), color(c, 0.3), [0.285 + (i % 2) * 0.03, 0.065 - (i % 2) * 0.014, 0.05 + i * 0.075], [0, 0, -0.44]));
+    // coin door and speaker slots
+    p.add(rbox(0.02, 0.32, 0.3, 0.008, 1), black, [0.305, -0.5, 0]);
+    for (const z of [-0.06, 0.06]) p.add(rbox(0.012, 0.07, 0.035, 0.004, 1), M.emissive(0xff3b3b, 0.9), [0.318, -0.44, z]);
+    for (let i = 0; i < 4; i++) p.add(rbox(0.012, 0.012, 0.5, 0.004, 1), black, [0.19 + i * 0.03, 0.742 + i * 0.006, 0]);
+    return p.build();
+  });
+  const add = (geo: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number) => {
     const mesh = new THREE.Mesh(geo, m);
     mesh.position.set(x, y, z);
-    mesh.rotation.z = rz;
-    mesh.castShadow = true;
     v.add(mesh);
     return mesh;
   };
-  add(new THREE.BoxGeometry(0.75, 1.9, 0.8), body, 0, 0, 0);
-  for (const z of [-0.41, 0.41]) add(new THREE.BoxGeometry(0.76, 1.9, 0.02), M.stripes('#ff3bb0', '#2a1745'), 0, 0, z);
+  for (const z of [-0.412, 0.412]) add(new THREE.PlaneGeometry(0.5, 1.1), M.stripes('#ff3bb0', '#2a1745'), -0.1, -0.3, z).rotation.y = z > 0 ? 0 : Math.PI;
   // screen, angled back, facing the street (+x)
-  const scr = add(new THREE.PlaneGeometry(0.55, 0.5), screen(), 0.39, 0.38, 0);
+  const scr = add(new THREE.PlaneGeometry(0.6, 0.54), screen(), 0.142, 0.42, 0);
   scr.rotation.order = 'YXZ';
-  scr.rotation.set(-0.25, Math.PI / 2, 0); // tipped back towards whoever's playing
-  add(new THREE.BoxGeometry(0.3, 0.1, 0.72), color(0x111111, 0.4), 0.45, -0.05, 0);
+  scr.rotation.set(-0.16, Math.PI / 2, 0); // tipped back towards whoever's playing
   const marquee = mapMat(signTex(['PIXEL RAMPAGE'], '#ff3bb0', '#ffffff', 256, 64, 'Arial Black'), { emissive: 0xff3bb0, emissiveIntensity: 0.6 });
-  const mq = add(new THREE.PlaneGeometry(0.7, 0.2), marquee, 0.385, 0.84, 0);
-  mq.rotation.set(0, Math.PI / 2, 0);
+  const mq = add(new THREE.PlaneGeometry(0.74, 0.17), marquee, 0.345, 0.855, 0);
+  mq.rotation.order = 'YXZ';
+  mq.rotation.set(0.3, Math.PI / 2, 0);
   // face the street from whichever side it stands on
   const yaw = theta(s) + (u > 0 ? 0 : Math.PI);
   G.destruction.add(toWorld(s, u, 0.95), yawQ(yaw), [0.38, 0.95, 0.4], {

@@ -174,6 +174,9 @@ export class Ragdoll implements Entity {
     for (const p of this.parts) G.physics.removeBody(p.body);
     if (this.hat) this.scene.remove(this.hat.mesh);
     this.scene.remove(this.rig.root);
+    this.rig.body.skeleton.dispose();
+    this.rig.body.geometry.dispose();
+    this.rig.face.geometry.dispose();
     this.parts = [];
   }
 
@@ -266,5 +269,8 @@ export class Runner implements Entity {
   dispose() {
     G.physics.removeBody(this.body);
     this.scene.remove(this.mesh);
+    this.rig.body.skeleton.dispose();
+    this.rig.body.geometry.dispose();
+    this.rig.face.geometry.dispose();
   }
 }

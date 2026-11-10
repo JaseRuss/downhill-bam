@@ -330,7 +330,7 @@ export function pipe(path: (V3 | THREE.Vector3)[], r: number | number[], o: Pipe
 
 // ------------------------------------------------------------------ solids
 /** A box with rounded edges. */
-export function rbox(w: number, h: number, d: number, r = Math.min(w, h, d) * 0.2, seg = q(3, 1)) {
+export function rbox(w: number, h: number, d: number, r = Math.min(w, h, d) * 0.2, seg = 1) {
   return new RoundedBoxGeometry(w, h, d, seg, Math.min(r, Math.min(w, h, d) / 2 - 1e-4));
 }
 

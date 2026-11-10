@@ -7,6 +7,11 @@ import { makeEnv } from './art/Materials';
 import * as H from './art/Humanoid';
 import * as A from './art/Accessories';
 import { VEHICLES, VehicleId } from './vehicle/Vehicles';
+import { G } from './ctx';
+import * as Road from './world/Road';
+import * as P from './props/Props';
+import * as Hm from './props/Homages';
+import * as Mo from './art/Motors';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(1);
@@ -54,6 +59,27 @@ function person(o: H.Outfit, x: number, pose: (r: H.Rig) => void = (r) => H.pose
   return r;
 }
 
+// Props place themselves through the destruction system; here that just lines them up in a row.
+let slot = 0, gapZ = 1.4;
+Road.setCourse('royalmile', 1);
+Object.assign(G, {
+  updaters: [],
+  destruction: {
+    add: (_pos: any, _q: any, half: number[], opts: any) => {
+      const v = opts.visual as THREE.Object3D;
+      v.position.set(0, half[1], slot);
+      v.rotation.set(0, 0, 0);
+      slot += gapZ;
+      stage.add(v);
+      return { mesh: v, opts, body: {} };
+    },
+  },
+});
+const row = (gap: number, n: number) => {
+  gapZ = gap;
+  slot = (-(n - 1) * gap) / 2;
+};
+
 function vehicle(id: VehicleId, z = 0) {
   const spec = VEHICLES[id];
   const g = new THREE.Group();
@@ -89,6 +115,33 @@ function vehicle(id: VehicleId, z = 0) {
 }
 
 const MODELS: Record<string, () => void> = {
+  props: () => {
+    row(1.5, 9);
+    const v = new THREE.Vector3();
+    P.communalBin(0, 0); P.bollard(0, 0); P.lampPost(0, 0); P.aBoard(0, 0, 0); P.cone(0, 0); P.bench(0, 1); P.barrier(0, 0); P.barrel(v); P.haggis(v);
+  },
+  homage: () => {
+    row(2.2, 2);
+    Hm.policeBox(0, 0); Hm.arcadeCabinet(0, 1);
+  },
+  cars: () => {
+    [0xb3122e, 0x1b4f9c, 0xdcdcdc].forEach((t, i) => {
+      const c = Mo.carModel(t);
+      c.position.set(0, 0.85, (i - 1.5) * 2.4);
+      stage.add(c);
+    });
+    const pc = Mo.policeCarModel(new THREE.MeshStandardMaterial({ color: 0xf2d21b })).group;
+    pc.position.set(0, 0.85, 1.5 * 2.4);
+    stage.add(pc);
+  },
+  tram: () => {
+    stage.add(Mo.tramModel(3, 9.6, 0.5));
+  },
+  digger: () => {
+    const d = Mo.diggerModel();
+    d.position.y = 1.1;
+    stage.add(d);
+  },
   trolley: () => vehicle('trolley'),
   blower: () => vehicle('blower'),
   scooter: () => vehicle('scooter'),

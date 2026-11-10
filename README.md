@@ -31,9 +31,9 @@ Phones and tablets get their own version automatically (`src/core/Platform.ts`):
 - **Steer by tilting** the phone in landscape like a steering wheel. Whatever angle you're holding it at when the swing starts counts as straight ahead. There's a sensitivity slider on the title screen. iPhones ask permission for the tilt sensor when you press PLAY; if there's no sensor (or you say no), ◀ ▶ buttons appear instead.
 - **Tap** to kick (the same three-tap swing) and press the **HOP** button to hop.
 - Landscape only (portrait shows a "turn your phone sideways" screen). Android goes fullscreen and buzzes on big hits.
-- Lighter on the hardware: lower resolution (dropped further on the fly if the frame rate sags below 40 fps), smaller shadows, shorter draw distance, half the background crowds, a smaller backdrop city, and fewer pieces of debris.
+- Lighter on the hardware: lower resolution (dropped further on the fly if the frame rate sags below 40 fps), smaller shadows, shorter draw distance, half the background crowds, a smaller backdrop city, fewer pieces of debris, and every model built with fewer segments.
 
-On every device, people standing more than a short distance away are drawn as one merged model each (about 6 pieces instead of 27), and switch back to the full jointed figure as you get close or the moment they're knocked flying.
+On every device, people standing more than a short distance away are swapped for a low-detail copy frozen in their pose, and switch back to the full posable figure as you get close or the moment they're knocked flying.
 
 ## Nods to the local games industry
 
@@ -72,6 +72,14 @@ George IV Bridge diversion (signs, an occupied portaloo) · Victoria Street's pa
 
 Every ground-floor shop window shows a room behind the glass using interior mapping, the trick open-world games use for city windows. At start-up four little 3D rooms (a pub, a gift shop, a café and a kilt shop) are built and rendered once into cubemaps (`src/art/Interiors.ts`). Each window is then a single flat quad whose shader traces the view ray into an imaginary box room and looks the hit point up in the cubemap, so the rooms have depth and parallax as you drive past. All windows share one material, so they batch into a handful of draw calls.
 
+## Models
+
+Everything is modelled in code (`src/art/Model.ts`): shapes are lofted through cross-sections, lathed, swept along paths and extruded, rather than stacked from boxes and spheres. A finished model is merged into a handful of meshes, with every plain coloured surface stored as vertex colour on a shared material, so a prop is three or four draw calls instead of forty. Chrome, paint and glass reflect a small generated sky.
+
+People (`src/art/Humanoid.ts`) are one skinned body and a head. The body and head are sculpted once per shape (legwear, sleeves, build, hair) and shared; each person owns only their colours, and their height and build are applied through the skeleton. Hats, scarves, cameras and bagpipes are in `src/art/Accessories.ts`; cars, the tram and the digger in `src/art/Motors.ts`.
+
+`viewer.html` (dev server only, e.g. `/viewer.html?m=people`) is a turntable for looking at models under the game's lighting; `window.cam(yaw, pitch, distance)` moves the camera.
+
 ## Code map
 
 - `src/game/` — game flow (`Game.ts`: title/attract mode, tour, aim, run, results), career save (`Career.ts`), swing meter, camera, scoring, commentary
@@ -80,6 +88,6 @@ Every ground-floor shop window shows a room behind the glass using interior mapp
 - `src/world/` — street geometry (`Road.ts`: both courses, laid out as a path you can bend), craterable terrain, static scenery batching, sky and backdrop
 - `src/level/` — tenement generator, Edinburgh set pieces, Princes Street Gardens (`Gardens.ts`), the Big Boot launcher, the Royal Mile and long-course layouts with their tours
 - `src/props/` — bins, bollards, barrels, scaffolding, tourists, pigeons
-- `src/art/` — procedural canvas textures (sandstone, cobbles, tartan, shop signs…)
+- `src/art/` — the modelling toolkit, people, accessories and road vehicles; procedural canvas textures (sandstone, cobbles, tartan, shop signs…)
 
 Add `?debug` to the URL to expose test helpers in the console: `autopilot()`, `launchOnly()`, `drive(frames)`, `F(n)` frame stepping (pauses the live loop), and `setCareer(tier, vehicle)` to jump to any stage, e.g. `setCareer(4, 'buggy')`.

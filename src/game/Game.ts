@@ -239,6 +239,7 @@ export class Game {
     G.crowd.dispose();
     this.scene.traverse((o: any) => {
       if (o.geometry) o.geometry.dispose();
+      if (o.isSkinnedMesh) o.skeleton.dispose();
     });
     G.physics.dispose();
   }

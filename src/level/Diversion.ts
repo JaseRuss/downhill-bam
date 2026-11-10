@@ -5,6 +5,7 @@ import { addStatic } from '../world/Batcher';
 import { M, color, mapMat } from '../art/Materials';
 import { clockTex, signTex, checkerTex, rng } from '../art/Textures';
 import { hiVis } from '../art/Accessories';
+import { carModel, diggerModel, tramModel } from '../art/Motors';
 import * as Road from '../world/Road';
 import {
   MARKS, JOIN_S, HALF_ROAD, HALF_STREET, baseH, theta, toWorld, toWorldAbs, toRoad, roadGroup, right, forward, edgeL, edgeR, H,
@@ -438,21 +439,13 @@ function grassmarket() {
 // 4. King's Stables Road: parked cars and a traffic warden
 // =====================================================================
 function car(s: number, u: number, tint: number, seed: number) {
-  const v = new THREE.Group();
-  const paint = color(tint, 0.35, 0.4);
-  v.add(bx(4.0, 0.7, 1.75, paint, 0, -0.15, 0));
-  v.add(bx(2.2, 0.6, 1.6, paint, -0.25, 0.5, 0));
-  v.add(bx(2.1, 0.5, 1.62, color(0x2a3540, 0.15, 0.5), -0.25, 0.48, 0));
-  for (const x of [-1.3, 1.3]) for (const z of [-0.85, 0.85]) {
-    const w = cyl(0.33, 0.33, 0.24, M.black(), x, -0.5, z, 12);
-    w.rotation.x = Math.PI / 2;
-    v.add(w);
-  }
-  v.add(bx(0.05, 0.16, 0.4, M.emissive(0xfff2c0, 0.8), 2.0, -0.05, 0.6));
-  v.add(bx(0.05, 0.16, 0.4, M.emissive(0xfff2c0, 0.8), 2.0, -0.05, -0.6));
+  const v = carModel(tint);
   if (seed % 3 === 0) {
     // a parking ticket on the windscreen, naturally
-    v.add(bx(0.02, 0.2, 0.14, color(0xf2c14e, 0.8), 0.86, 0.5, 0.3));
+    const ticket = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.2, 0.14), color(0xf2c14e, 0.8));
+    ticket.position.set(0.78, 0.44, 0.3);
+    ticket.rotation.z = 0.75;
+    v.add(ticket);
   }
   let honked = false;
   G.destruction.add(toWorld(s, u, 0.85), theta(s) - Math.PI / 2, [2.0, 0.85, 0.88], {
@@ -568,35 +561,24 @@ function tram() {
     },
   };
   const LEN = 9.6, N = 3, GAP = 0.5;
-  const vis = new THREE.Group();
-  const white = color(0xf2f2ee, 0.35, 0.2), red = color(0xb3122e, 0.4, 0.2), glassM = color(0x1d2630, 0.1, 0.6);
+  const vis = tramModel(N, LEN, GAP);
   for (let i = 0; i < N; i++) {
     const z = (i - (N - 1) / 2) * (LEN + GAP);
-    const c = new THREE.Group();
-    c.add(bx(2.65, 2.7, LEN, white, 0, 1.75, 0));
-    c.add(bx(2.67, 0.35, LEN, red, 0, 0.6, 0));
-    c.add(bx(2.68, 1.0, LEN - 1.2, glassM, 0, 2.2, 0));
-    c.add(bx(2.4, 0.3, LEN - 1, color(0x888888, 0.5), 0, 3.25, 0));
-    c.position.z = z;
-    vis.add(c);
     const col = world.createCollider(
       RAPIER.ColliderDesc.cuboid(1.33, 1.6, LEN / 2).setTranslation(0, 1.8, z).setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS).setContactForceEventThreshold(3000),
       body,
     );
     G.physics.register(col, ent);
   }
-  // cab ends and a pantograph
+  // where it's going
   for (const sgn of [-1, 1]) {
-    const nose = bx(2.6, 2.4, 0.9, white, 0, 1.65, sgn * ((N * (LEN + GAP)) / 2 - 0.1));
-    vis.add(nose);
-    const dest = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.3), mapMat(signTex(['NEWHAVEN'], '#111', '#ffb000', 256, 48)));
-    dest.position.set(0, 2.95, sgn * ((N * (LEN + GAP)) / 2 + 0.36));
+    const dest = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.28), mapMat(signTex(['NEWHAVEN'], '#111', '#ffb000', 256, 48)));
+    dest.position.set(0, 2.86, sgn * ((N * (LEN + GAP)) / 2 + 0.4));
+    dest.rotation.x = -sgn * 0.42;
     if (sgn < 0) dest.rotation.y = Math.PI;
+    dest.rotation.order = 'YXZ';
     vis.add(dest);
   }
-  const pant = bx(0.06, 1.2, 1.4, M.metal(), 0, 4.0, 0);
-  pant.rotation.x = 0.5;
-  vis.add(pant);
   vis.traverse((o: any) => o.isMesh && (o.castShadow = true));
   vis.visible = false;
   G.scene.add(vis);
@@ -775,15 +757,7 @@ function walnutWhip() {
 // 9. Leith Walk: the tram works
 // =====================================================================
 function digger(s: number, u: number) {
-  const v = new THREE.Group();
-  const yellow = color(0xf2b01e, 0.45, 0.2);
-  v.add(bx(3.2, 0.5, 2.2, M.black(), 0, -0.85, 0));
-  v.add(bx(2.6, 1.3, 2.2, yellow, -0.2, 0.05, 0));
-  v.add(bx(1.2, 1.2, 1.4, color(0x2a3540, 0.2, 0.5), -0.4, 1.3, 0.3));
-  const arm = bx(0.35, 0.35, 3.2, yellow, 1.6, 1.0, 0);
-  arm.rotation.set(0, Math.PI / 2, 0.6);
-  v.add(arm);
-  v.add(bx(0.8, 0.7, 1.1, M.metal(), 2.9, -0.2, 0));
+  const v = diggerModel();
   G.destruction.add(toWorld(s, u, 1.1), theta(s) - Math.PI / 2, [1.6, 1.1, 1.1], {
     visual: v, dynamic: true, density: 180, points: 1500, label: 'Digger', sound: 'metal', restitution: 0.2,
   });
