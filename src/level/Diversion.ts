@@ -4,7 +4,7 @@ import { G } from '../ctx';
 import { addStatic } from '../world/Batcher';
 import { M, color, mapMat } from '../art/Materials';
 import { clockTex, signTex, checkerTex, rng } from '../art/Textures';
-import { hatMesh } from '../art/Humanoid';
+import { hiVis } from '../art/Accessories';
 import * as Road from '../world/Road';
 import {
   MARKS, JOIN_S, HALF_ROAD, HALF_STREET, baseH, theta, toWorld, toWorldAbs, toRoad, roadGroup, right, forward, edgeL, edgeR, H,
@@ -47,19 +47,7 @@ function trigger(s: number, fn: () => void) {
 
 /** Hi-vis and a cap for traffic wardens and workies. */
 function dressUp(t: { rig: any }, vest: number, cap: number) {
-  const r = t.rig;
-  const v = new THREE.Mesh(new THREE.CylinderGeometry(0.205, 0.165, 0.31, 12), color(vest, 0.6));
-  v.position.y = 0.155;
-  r.chest.add(v);
-  const strip = new THREE.Mesh(new THREE.CylinderGeometry(0.208, 0.2, 0.04, 12), color(0xe8e8e8, 0.2, 0.6));
-  strip.position.y = 0.1;
-  r.chest.add(strip);
-  if (r.hat) r.hat.visible = false;
-  const h = hatMesh('cap', color(cap, 0.6));
-  if (h) {
-    h.position.set(-0.01, 0.118, 0);
-    r.head.add(h);
-  }
+  hiVis(t.rig, vest, cap);
 }
 
 // =====================================================================

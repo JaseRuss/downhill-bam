@@ -3,7 +3,7 @@ import { RAPIER, Entity, STEP } from '../core/Physics';
 import { G } from '../ctx';
 import * as Road from '../world/Road';
 import { theta, toWorld, toRoad, forward, right, edgeL, edgeR } from '../world/Road';
-import { buildSeatedRider, Ragdoll, Runner, SeatedRider } from './Rider';
+import { buildSeatedRider, Ragdoll, Runner, SeatedRider, seatKilt } from './Rider';
 import { VEHICLES, VehicleId, VehicleParts, VehicleSpec } from './Vehicles';
 
 const HOP_RECHARGE = 5;
@@ -540,10 +540,7 @@ export class Trolley implements Entity {
       rig.elbowR.rotation.z = 0.3 + Math.cos(tt * 10) * 0.4 * flail;
       rig.head.rotation.z = -0.1 - flail * 0.15 + Math.sin(tt * 13) * 0.05 * flail;
       const air = this.grounded ? 0 : Math.min(1, this.airTime * 2);
-      if (rig.kilt) {
-        rig.kilt.scale.set(1 + air * 0.4, 1 - air * 0.35 + Math.sin(tt * 20) * 0.04 * flail, 1 + air * 0.4);
-        rig.kilt.position.y = -0.14 + air * 0.1;
-      }
+      seatKilt(rig, air, Math.sin(tt * 20) * 0.04 * flail);
       // legs kick in the air
       rig.kneeL.rotation.z = -1.25 + air * Math.sin(tt * 15) * 0.6;
       rig.kneeR.rotation.z = -1.25 + air * Math.cos(tt * 15) * 0.6;

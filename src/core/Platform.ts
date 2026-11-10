@@ -57,8 +57,10 @@ export interface Quality {
   /** Resolution of the big painted textures (stone, facades, shopfronts). iOS kills pages whose
    *  canvases pass ~384 MB, and the full long course needs ~600 MB of them at full size. */
   texScale: number;
+  /** How finely models are built: segments round a limb, rings along it. */
+  detail: number;
 }
 
 export const QUALITY: Quality = PLATFORM.mobile
-  ? { pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5), antialias: false, shadowMap: 1024, cullDistance: 100, lodDistance: 14, crowd: 0.5, city: 0.55, maxDebris: 180, dynamicResolution: true, texScale: 0.5 }
-  : { pixelRatio: Math.min(window.devicePixelRatio || 1, 1.75), antialias: true, shadowMap: 2048, cullDistance: 165, lodDistance: 22, crowd: 1, city: 1, maxDebris: 420, dynamicResolution: false, texScale: 1 };
+  ? { pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5), antialias: false, shadowMap: 1024, cullDistance: 100, lodDistance: 14, crowd: 0.5, city: 0.55, maxDebris: 180, dynamicResolution: true, texScale: 0.5, detail: 0.62 }
+  : { pixelRatio: Math.min(window.devicePixelRatio || 1, 1.75), antialias: true, shadowMap: 2048, cullDistance: 165, lodDistance: 22, crowd: 1, city: 1, maxDebris: 420, dynamicResolution: false, texScale: 1, detail: 1 };

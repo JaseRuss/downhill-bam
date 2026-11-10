@@ -4,8 +4,10 @@ import { G } from '../ctx';
 import { QUALITY } from '../core/Platform';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { M, color } from '../art/Materials';
+import { ball, cyl, loft, model, Parts, q, rbox } from '../art/Model';
 import { theta, toWorld, toRoad, forward, right } from '../world/Road';
-import { buildHuman, fanOutfit, wizardOutfit, influencerOutfit, marcherOutfit, poseRun, D, ghostOutfit, mimeOutfit, piperOutfit, poseFlail, poseSplat, poseStand, Rig, touristOutfit } from '../art/Humanoid';
+import { bakeFigure, buildHuman, fanOutfit, wizardOutfit, influencerOutfit, marcherOutfit, poseRun, ghostOutfit, mimeOutfit, piperOutfit, poseFlail, poseSplat, poseStand, Rig, touristOutfit } from '../art/Humanoid';
+import { bagpipes, bumbag, camera, lantern, phone, pointyHat, scarf, shades, specs, umbrella, wand } from '../art/Accessories';
 
 export type TouristKind = 'tourist' | 'ghost' | 'mime' | 'piper' | 'hearts' | 'hibs' | 'wizard' | 'influencer' | 'marcher';
 
@@ -36,7 +38,7 @@ class Tourist implements Entity {
   private walkU: [number, number] = [0, 0];
   private walkDir = 1;
   private umbrella: THREE.Object3D | null = null;
-  /** Far away and standing still: one merged mesh per material instead of ~27 jointed parts. */
+  /** Far away and standing still: a low-detail copy, merged into one mesh per material. */
   private lod: THREE.Group | null = null;
   private lodOff = false;
 
@@ -71,108 +73,30 @@ class Tourist implements Entity {
   /** Bits and bobs: bagpipes, a lantern, a camera. */
   private props() {
     const r = this.rig;
-    if (this.type === 'piper') {
-      const bag = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), M.tartan('green'));
-      bag.scale.set(0.9, 0.75, 1.25);
-      bag.position.set(0.16, 0.12, 0.12);
-      r.chest.add(bag);
-      for (let i = 0; i < 3; i++) {
-        const drone = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.022, 0.55 + i * 0.12, 6), M.black());
-        drone.position.set(0.05 - i * 0.04, 0.45 + i * 0.05, 0.16 + i * 0.03);
-        drone.rotation.set(0.5, 0, -0.35 + i * 0.1);
-        r.chest.add(drone);
-      }
-      const chanter = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.02, 0.32, 6), M.black());
-      chanter.position.set(0.3, 0.02, 0);
-      chanter.rotation.z = 0.5;
-      r.chest.add(chanter);
-    } else if (this.type === 'ghost') {
-      const lantern = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.16, 0.1), M.emissive(0xffb84d, 2));
-      lantern.position.y = -0.32;
-      r.elbowR.add(lantern);
-    } else if (this.type === 'wizard') {
-      const s = r.height / 1.75, R = D.headR * s;
-      // round specs
-      for (const z of [-1, 1]) {
-        const lens = new THREE.Mesh(new THREE.TorusGeometry(R * 0.26, R * 0.04, 5, 14), M.black());
-        lens.position.set(R * 0.98, R * 0.2, z * R * 0.36);
-        lens.rotation.y = Math.PI / 2;
-        r.head.add(lens);
-      }
+    if (this.type === 'piper') bagpipes(r);
+    else if (this.type === 'ghost') lantern(r);
+    else if (this.type === 'wizard') {
+      specs(r);
       // a striped scarf in one of four colour pairs
       const pairs: [string, string][] = [['#7a1f1f', '#d4a017'], ['#1d5c3a', '#b8b8b8'], ['#1b3f8a', '#b08d57'], ['#d4a017', '#222222']];
       const [a, b] = pairs[Math.floor(Math.random() * pairs.length)];
-      const sc = M.stripes(a, b);
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.035, 6, 14), sc);
-      ring.rotation.x = Math.PI / 2;
-      ring.position.y = 0.33;
-      r.chest.add(ring);
-      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.4, 0.09), sc);
-      tail.position.set(0.12, 0.12, -0.05);
-      r.chest.add(tail);
-      // the wand
-      const wand = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.012, 0.34, 6), color(0x5a3a22, 0.6));
-      wand.position.set(0.08, -0.36, 0);
-      wand.rotation.z = -1.3;
-      r.elbowR.add(wand);
+      scarf(r, a, b, -1);
+      wand(r);
       // a pointy hat on some
       if (Math.random() < 0.4) {
         if (r.hat) r.hat.visible = false;
-        const hat = new THREE.Group();
-        const felt = color(Math.random() < 0.5 ? 0x2a1d3a : 0x161616, 0.9);
-        hat.add(new THREE.Mesh(new THREE.CylinderGeometry(R * 1.9, R * 1.9, R * 0.08, 16), felt));
-        const tip = new THREE.Mesh(new THREE.ConeGeometry(R * 1.05, R * 3.6, 12), felt);
-        tip.position.y = R * 1.8;
-        tip.rotation.z = 0.25;
-        hat.add(tip);
-        hat.position.set(-0.01 * s, R * 0.95, 0);
-        r.head.add(hat);
+        pointyHat(r, Math.random() < 0.5);
       }
     } else if (this.type === 'influencer') {
-      const s = r.height / 1.75, R = D.headR * s;
-      const shades = new THREE.Mesh(new THREE.BoxGeometry(R * 0.22, R * 0.3, R * 1.15), color(0x0a0a0a, 0.15, 0.6));
-      shades.position.set(R * 0.98, R * 0.22, 0);
-      r.head.add(shades);
+      shades(r);
       // a phone held out at arm's length, on a selfie stick half the time
-      const stick = Math.random() < 0.5;
-      const len = stick ? 0.75 : 0.02;
-      if (stick) {
-        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, len, 6), M.steel());
-        pole.position.y = -0.3 - len / 2;
-        r.elbowR.add(pole);
-      }
-      const phone = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.15, 0.012), M.black());
-      phone.position.y = -0.33 - len;
-      phone.rotation.x = Math.PI / 2;
-      r.elbowR.add(phone);
-      this.flash = new THREE.Mesh(new THREE.PlaneGeometry(0.065, 0.13), new THREE.MeshBasicMaterial({ color: 0x223344 }));
-      this.flash.position.set(0, 0, -0.007);
-      this.flash.rotation.y = Math.PI;
-      phone.add(this.flash);
+      this.flash = phone(r, Math.random() < 0.5);
     } else if (this.type === 'hearts' || this.type === 'hibs') {
       // a two-colour bar scarf round the neck
-      const sc = this.type === 'hearts' ? M.stripes('#7a1f3d', '#f2f2f2') : M.stripes('#0b6b3a', '#f2f2f2');
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.035, 6, 14), sc);
-      ring.rotation.x = Math.PI / 2;
-      ring.position.y = 0.33;
-      r.chest.add(ring);
-      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.36, 0.09), sc);
-      tail.position.set(0.12, 0.14, 0.05);
-      r.chest.add(tail);
+      scarf(r, this.type === 'hearts' ? '#7a1f3d' : '#0b6b3a', '#f2f2f2', 1);
     } else if (this.type === 'tourist') {
-      const cam = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.12), M.black());
-      if (this.photographer) {
-        cam.position.set(0.04, -0.3, 0);
-        r.elbowR.add(cam);
-      } else {
-        cam.position.set(0.2, 0.12, 0);
-        r.chest.add(cam);
-      }
-      if (Math.random() < 0.4) {
-        const bb = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.26), color(0x3a86ff, 0.7));
-        bb.position.set(0.16, 0.02, 0);
-        r.pelvis.add(bb);
-      }
+      camera(r, this.photographer);
+      if (Math.random() < 0.4) bumbag(r);
     }
   }
 
@@ -402,13 +326,7 @@ class Tourist implements Entity {
       // drifting down from on high under a brolly
       this.body.setGravityScale(0.13, true);
       this.body.setLinearDamping(1.5);
-      const u = new THREE.Group();
-      const canopy = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), color(0xd7263d, 0.6));
-      canopy.scale.y = 0.55;
-      u.add(canopy);
-      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.4, 5), M.black());
-      shaft.position.y = -0.2;
-      u.add(shaft);
+      const u = umbrella();
       u.position.set(0.05, 0.62, 0);
       this.rig.root.add(u);
       this.umbrella = u;
@@ -421,20 +339,33 @@ class Tourist implements Entity {
     this.mesh.updateMatrixWorld(true);
     const inv = this.mesh.matrixWorld.clone().invert();
     const byMat = new Map<THREE.Material, THREE.BufferGeometry[]>();
-    root.traverse((o: any) => {
-      if (!o.isMesh || Array.isArray(o.material)) return;
-      const g = (o.geometry as THREE.BufferGeometry).clone();
-      for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
-      if (!g.index) return;
-      g.applyMatrix4(inv.clone().multiply(o.matrixWorld));
-      let l = byMat.get(o.material);
-      if (!l) byMat.set(o.material, (l = []));
+    const push = (mat: THREE.Material, g: THREE.BufferGeometry) => {
+      let l = byMat.get(mat);
+      if (!l) byMat.set(mat, (l = []));
       l.push(g);
+    };
+    // the body and head, posed as they stand, at a fraction of the detail
+    const fig = bakeFigure(this.rig, inv);
+    for (const g of fig.geos) push(fig.mat, g);
+    // and whatever they're wearing or carrying
+    root.traverseVisible((o: any) => {
+      if (!o.isMesh || o.userData.fig || Array.isArray(o.material)) return;
+      const src = o.geometry as THREE.BufferGeometry;
+      const n = src.getAttribute('position').count;
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', src.getAttribute('position').clone());
+      g.setAttribute('normal', src.getAttribute('normal').clone());
+      // vertex-coloured models keep their colours, textured ones their UVs
+      if (o.material.vertexColors && src.getAttribute('color')) g.setAttribute('color', src.getAttribute('color').clone());
+      else g.setAttribute('uv', src.getAttribute('uv')?.clone() ?? new THREE.BufferAttribute(new Float32Array(n * 2), 2));
+      g.setIndex(src.index ? src.index.clone() : Array.from({ length: n }, (_, i) => i));
+      g.applyMatrix4(inv.clone().multiply(o.matrixWorld));
+      push(o.material, g);
     });
     const lod = new THREE.Group();
     for (const [mat, geos] of byMat) {
-      const merged = mergeGeometries(geos, false);
-      geos.forEach((g) => g.dispose());
+      const merged = geos.length > 1 ? mergeGeometries(geos, false) : geos[0];
+      if (geos.length > 1) geos.forEach((g) => g.dispose());
       if (!merged) continue;
       const m = new THREE.Mesh(merged, mat);
       m.castShadow = true;
@@ -465,6 +396,57 @@ class Tourist implements Entity {
   }
 }
 
+/**
+ * A pigeon or a gull: body, head (it pecks), and two wings that fold back along the flanks until
+ * something with wheels arrives.
+ */
+function bird(gull: boolean) {
+  return model(`bird|${gull}`, () => {
+    const g = new THREE.Group();
+    const coat = color(gull ? 0xf4f4f0 : 0x7d8590, 0.62), wingC = color(gull ? 0xa9b0b8 : 0x6a727d, 0.62);
+    const neck = color(gull ? 0xffffff : 0x4c7a6a, 0.62), beak = color(gull ? 0xf2b630 : 0x3a3a3a, 0.62), leg = color(gull ? 0xe8a23a : 0xc9566a, 0.62);
+    const k = gull ? 1.25 : 1;
+    const body = new Parts();
+    body.add(loft([
+      { t: -0.21, w: 0.035, d: 0.005, x: 0.035 },
+      { t: -0.12, w: 0.046, d: [0.02, 0.012], x: 0.022 },
+      { t: -0.05, w: 0.075, d: [0.056, 0.05] },
+      { t: 0.03, w: 0.082, d: [0.06, 0.062] },
+      { t: 0.1, w: 0.062, d: [0.056, 0.05], x: 0.012 },
+      { t: 0.145, w: 0.03, d: [0.034, 0.026], x: 0.034 },
+    ], { axis: 'x', seg: q(10, 6), sub: 1, cap: 'round', dome: 0.012 }), coat);
+    for (const z of [-0.03, 0.03]) {
+      body.add(cyl(0.006, 0.005, 0.06, 4), leg, [0.0, -0.075, z]);
+      body.add(rbox(0.05, 0.006, 0.03, 0.002, 1), leg, [0.014, -0.1, z]);
+    }
+    g.add(body.build(new THREE.Group()));
+    const head = new Parts();
+    head.add(ball(0.047, q(10, 6)), neck);
+    head.add(loft([{ t: 0.035, w: 0.014, d: 0.012 }, { t: gull ? 0.095 : 0.075, w: 0.002, d: 0.003, x: -0.006 }], { axis: 'x', seg: 5, cap: 'flat' }), beak);
+    for (const z of [-1, 1]) head.add(ball(0.008, 5), color(0x111111, 0.62), [0.026, 0.014, z * 0.036]);
+    head.add(cyl(0.034, 0.042, 0.07, q(8, 5)), neck, [-0.022, -0.04, 0], [0, 0, 0.5]);
+    const h = head.build(new THREE.Group());
+    h.position.set(0.13, 0.08, 0);
+    g.add(h);
+    for (const z of [-1, 1]) {
+      const wing = new Parts();
+      wing.add(loft([
+        { t: 0, w: 0.07, d: 0.008 },
+        { t: 0.1, w: 0.062, d: 0.006, z: -0.006 },
+        { t: 0.19, w: 0.04, d: 0.004, z: -0.02, sh: gull ? 0.25 : 0.6 },
+        { t: 0.24, w: 0.012, d: 0.003, z: -0.04, sh: gull ? 0.15 : 0.5 },
+      ], { axis: 'z', seg: 6, cap: 'flat' }), wingC, null, null, [1, 1, z]);
+      const w = wing.build(new THREE.Group());
+      w.name = 'wing';
+      w.position.set(-0.01, 0.036, z * 0.06);
+      w.rotation.y = -z * 1.42; // folded
+      g.add(w);
+    }
+    g.scale.setScalar(k);
+    return g;
+  });
+}
+
 interface Pigeon {
   mesh: THREE.Object3D;
   vel: THREE.Vector3;
@@ -480,25 +462,8 @@ class Flock {
 
   constructor(s: number, u: number, n: number, public gulls = false) {
     this.center = toWorld(s, u, 0);
-    const grey = color(gulls ? 0xf2f2ee : 0x7d8590, 0.8), neck = color(gulls ? 0xffffff : 0x4c7a6a, 0.5, 0.3), beak = color(gulls ? 0xf2b630 : 0x333333);
     for (let i = 0; i < n; i++) {
-      const g = new THREE.Group();
-      const body = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), grey);
-      body.scale.set(1.4, 0.9, 0.9);
-      g.add(body);
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), neck);
-      head.position.set(0.13, 0.08, 0);
-      g.add(head);
-      const b = new THREE.Mesh(new THREE.ConeGeometry(0.015, 0.05, 5), beak);
-      b.rotation.z = -Math.PI / 2;
-      b.position.set(0.19, 0.08, 0);
-      g.add(b);
-      for (const z of [-1, 1]) {
-        const wing = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.01, 0.12), grey);
-        wing.position.set(-0.02, 0.04, z * 0.1);
-        wing.name = 'wing';
-        g.add(wing);
-      }
+      const g = bird(gulls);
       const p = toWorld(s + (Math.random() - 0.5) * 3, u + (Math.random() - 0.5) * 2.5, 0.1);
       g.position.copy(p);
       g.rotation.y = Math.random() * 6;
@@ -530,7 +495,7 @@ class Flock {
         b.mesh.position.addScaledVector(b.vel, dt);
         b.mesh.rotation.y = Math.atan2(-b.vel.z, b.vel.x);
         b.mesh.children.forEach((c) => {
-          if (c.name === 'wing') c.rotation.x = Math.sin(b.t * 40) * 0.9 * (c.position.z > 0 ? 1 : -1);
+          if (c.name === 'wing') c.rotation.set(Math.sin(b.t * 40) * 0.9 * (c.position.z > 0 ? 1 : -1), 0, 0);
         });
       } else {
         // peck peck

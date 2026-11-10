@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { RAPIER, Physics, Entity } from '../core/Physics';
 import { G } from '../ctx';
-import { M } from '../art/Materials';
+import { M, color } from '../art/Materials';
 
 export type Shape = 'box' | 'cyl' | 'ball';
 export type SoundKind = 'wood' | 'stone' | 'glass' | 'metal' | 'soft';
@@ -221,6 +221,8 @@ export class Destruction {
       if (Array.isArray(o.mat)) mat = o.mat[0];
       else if (o.mat) mat = o.mat as THREE.Material;
       else p.mesh.traverse((m: any) => { if (!mat && m.isMesh) mat = Array.isArray(m.material) ? m.material[0] : m.material; });
+      // a model painted with vertex colour breaks into pieces of its main colour
+      if (mat && mat.userData.vc) mat = color(p.mesh.userData.tint ?? 0x888888, (mat as THREE.MeshStandardMaterial).roughness, (mat as THREE.MeshStandardMaterial).metalness);
     }
     const cuts = (n: number, hh: number) => {
       const c = [-hh];

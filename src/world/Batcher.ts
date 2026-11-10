@@ -48,13 +48,14 @@ function canonical(m: THREE.Material): THREE.Material {
   return c;
 }
 
-function subGeometry(geo: THREE.BufferGeometry, start: number, count: number) {
+function subGeometry(geo: THREE.BufferGeometry, start: number, count: number, painted: boolean) {
   const g = new THREE.BufferGeometry();
-  for (const name of ['position', 'normal', 'uv']) {
+  // models painted with vertex colour keep that and need no UVs; everything else is textured
+  for (const name of ['position', 'normal', painted ? 'color' : 'uv']) {
     const a = geo.getAttribute(name);
     if (a) g.setAttribute(name, a.clone());
   }
-  if (!g.getAttribute('uv')) {
+  if (!painted && !g.getAttribute('uv')) {
     const n = g.getAttribute('position').count;
     g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(n * 2), 2));
   }
@@ -86,7 +87,7 @@ export function bake(scene: THREE.Scene, chunk = 90) {
       for (const gr of groups) {
         const mat = mats[gr.materialIndex ?? 0];
         if (!mat) continue;
-        const sub = subGeometry(geo, gr.start, gr.count);
+        const sub = subGeometry(geo, gr.start, gr.count, !!mat.userData.vc && !!geo.getAttribute('color'));
         const rep = repeatOf(mat);
         if (rep) {
           const uv = sub.getAttribute('uv') as THREE.BufferAttribute;

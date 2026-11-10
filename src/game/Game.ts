@@ -21,6 +21,7 @@ import { Boot, ARC_R } from '../level/Boot';
 import { bake } from '../world/Batcher';
 import { Backdrop, HAAR } from '../world/Backdrop';
 import { initInteriors } from '../art/Interiors';
+import { makeEnv } from '../art/Materials';
 import { resetWanted } from '../props/Homages';
 import { MobileUI } from '../ui/MobileUI';
 import { QUALITY, CAM } from '../core/Platform';
@@ -124,6 +125,7 @@ export class Game {
 
     // render the shop interiors once, before any shop windows are built
     initInteriors(this.renderer);
+    makeEnv(this.renderer);
     this.build();
     this.enterTitle();
     (window as any).G = G;
@@ -264,6 +266,7 @@ export class Game {
     this.teardown();
     // render the shop interiors once, before any shop windows are built
     initInteriors(this.renderer);
+    makeEnv(this.renderer);
     this.build();
     this.enterTitle();
   }
