@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { G } from '../ctx';
 import { color } from '../art/Materials';
+import { cyl, lathe, model, Parts, pipe, q, torus } from '../art/Model';
 import { canvas } from '../art/Textures';
 import { toWorld } from '../world/Road';
 
@@ -50,20 +51,20 @@ function label() {
  * sugar-powered boost (it works with or without an engine).
  */
 export function skooshCan(s: number, u: number) {
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.9, 24, 1, true), label());
-  g.add(body);
-  const lid = color(0xc8ccd0, 0.25, 0.9);
-  for (const y of [-0.45, 0.45]) {
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.29, 0.32, 0.06, 24), lid);
-    cap.position.y = y + Math.sign(y) * 0.03;
-    g.add(cap);
-  }
-  const tab = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.015, 6, 12), lid);
-  tab.rotation.x = Math.PI / 2;
-  tab.position.set(0.1, 0.5, 0);
-  g.add(tab);
-  g.traverse((o: any) => o.isMesh && (o.castShadow = true));
+  // a proper drinks can: necked in at the top, a rolled rim, a dished base and a ring pull
+  const g = model('skoosh', () => {
+    const p = new Parts();
+    const alu = color(0xc8ccd0, 0.25, 0.9);
+    p.add(lathe([[0.27, -0.4], [0.32, -0.36], [0.32, 0.33], [0.3, 0.39], [0.27, 0.43]], q(24, 12), { cap: 'none', uv: [1, 1] }), label());
+    p.add(lathe([[0.0001, -0.39], [0.2, -0.4], [0.25, -0.45], [0.27, -0.4]], q(24, 12), { cap: 'none' }), alu);
+    p.add(lathe([[0.27, 0.43], [0.285, 0.455], [0.26, 0.455], [0.255, 0.435], [0.0001, 0.43]].reverse() as [number, number][], q(24, 12), { cap: 'none' }), alu);
+    p.add(torus(0.275, 0.012, q(24, 12), 5), alu, [0, 0.452, 0], [Math.PI / 2, 0, 0]);
+    // the tab, riveted on, and the scored opening under it
+    p.add(pipe([[0.02, 0.44, -0.04], [0.14, 0.444, -0.045], [0.17, 0.444, 0], [0.14, 0.444, 0.045], [0.02, 0.44, 0.04]], 0.012, { closed: true, bend: 0.03, seg: 5, flat: [1, 0.5] }), alu);
+    p.add(cyl(0.022, 0.022, 0.012, 8), alu, [0.02, 0.44, 0]);
+    p.add(cyl(0.07, 0.07, 0.004, q(12, 8)), color(0x8a8f96, 0.4, 0.85), [-0.09, 0.434, 0]);
+    return p.build();
+  });
   // a glowing ring on the cobbles so you can see it coming
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.3, 32), new THREE.MeshBasicMaterial({ color: 0xffd400, transparent: true, opacity: 0.6, depthWrite: false }));
   ring.rotation.x = -Math.PI / 2;

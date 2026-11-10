@@ -6,6 +6,7 @@ import { M, color, mapMat } from '../art/Materials';
 import { clockTex, signTex, checkerTex, rng } from '../art/Textures';
 import { hiVis } from '../art/Accessories';
 import { carModel, diggerModel, tramModel } from '../art/Motors';
+import { ball, cyl as mcyl, lathe, loft, model, Parts, pipe, q as mq, rbox } from '../art/Model';
 import * as Road from '../world/Road';
 import {
   MARKS, JOIN_S, HALF_ROAD, HALF_STREET, baseH, theta, toWorld, toWorldAbs, toRoad, roadGroup, right, forward, edgeL, edgeR, H,
@@ -904,16 +905,25 @@ function queenVictoria(s: number, u: number) {
   if (!on(s)) return;
   const bronze = color(0x4e5d4a, 0.42, 0.7);
   const plinthH = 2.6;
-  const fig = new THREE.Group();
-  // the Queen: a bell of a skirt, a sash, a wee crown and the sceptre
-  fig.add(cyl(0.25, 0.75, 1.5, bronze, 0, -0.55, 0, 16));
-  fig.add(cyl(0.2, 0.25, 0.6, bronze, 0, 0.5, 0, 12));
-  fig.add(new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), bronze));
-  fig.children[2].position.y = 1.0;
-  fig.add(cyl(0.12, 0.15, 0.12, M.gold(), 0, 1.2, 0, 10));
-  const sceptre = cyl(0.025, 0.025, 0.9, bronze, 0.3, 0.6, 0.25, 6);
-  sceptre.rotation.z = -0.3;
-  fig.add(sceptre);
+  // the Queen in bronze: a bell of skirts, a veil down her back, a wee crown, orb and sceptre
+  const fig = model('victoria', () => {
+    const p = new Parts();
+    const gold = M.gold();
+    const folds = (a: number, v: number) => 1 + 0.035 * Math.sin(a * 10) * (1 - v);
+    p.add(loft([{ t: -1.3, w: 0.76, d: [0.68, 0.9] }, { t: -1.1, w: 0.72, d: [0.64, 0.84] }, { t: -0.3, w: 0.42, d: [0.36, 0.44] }, { t: 0.0, w: 0.26, d: [0.2, 0.22] }], { seg: mq(24, 10), sub: 1, mod: folds }), bronze);
+    p.add(loft([{ t: -0.02, w: 0.25, d: [0.2, 0.2] }, { t: 0.3, w: 0.33, d: [0.25, 0.22] }, { t: 0.52, w: 0.36, d: [0.2, 0.2] }, { t: 0.62, w: 0.14, d: 0.12 }], { seg: mq(16, 8), sub: 1, cap: 'round' }), bronze);
+    for (const z of [1, -1]) p.add(pipe([[0, 0.5, z * 0.34], [0.1, 0.2, z * 0.4], [0.3, 0.14, z * 0.3]], [0.1, 0.085, 0.06], { curve: true, seg: mq(8, 5) }), bronze);
+    p.add(ball(0.16, mq(14, 8), 1.15), bronze, [0.02, 0.86, 0]);
+    p.add(ball(0.09, 8), bronze, [-0.13, 0.9, 0]);
+    p.add(loft([{ t: -0.2, w: 0.3, d: [0.02, 0.1] }, { t: 0.5, w: 0.24, d: [0.02, 0.1] }, { t: 0.98, w: 0.12, d: [0.02, 0.08] }], { seg: mq(10, 6), sub: 1, cap: 'round' }), bronze, [-0.18, 0, 0]);
+    p.add(lathe([[0.1, 1.0], [0.12, 1.04], [0.1, 1.12], [0.125, 1.17], [0.0001, 1.2]], mq(10, 6), { cap: 'none' }), gold, [0.02, 0, 0]);
+    p.add(mcyl(0.02, 0.02, 0.95, 6), bronze, [0.33, 0.42, 0.3], [0, 0, -0.18]);
+    p.add(ball(0.05, 8), gold, [0.415, 0.89, 0.3]);
+    p.add(ball(0.075, mq(10, 6)), gold, [0.33, 0.2, -0.3]);
+    p.add(rbox(0.018, 0.09, 0.018, 0.005), gold, [0.33, 0.31, -0.3]);
+    p.add(rbox(0.018, 0.018, 0.06, 0.005), gold, [0.33, 0.32, -0.3]);
+    return p.build();
+  });
   const statue = G.destruction.add(toWorld(s, u, plinthH + 1.3), theta(s), [0.6, 1.3, 0.6], {
     visual: fig, density: 1100, release: 9999, points: 2500, label: 'Queen Victoria', sound: 'metal', fracture: [1, 3, 1], fractureLoad: 600,
   });

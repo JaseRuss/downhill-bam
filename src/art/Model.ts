@@ -171,7 +171,12 @@ export function loft(input: Ring[], o: LoftOpts = {}) {
       const px = Math.sign(c) * Math.abs(c) ** e * (c >= 0 ? r.df : r.db) * k;
       const pz = Math.sign(s) * Math.abs(s) ** e * r.w * k;
       pos.push(r.x + px, r.t, r.z + pz);
-      if (o.uv) o.swap ? uv.push(v * o.uv[1], (j / seg) * o.uv[0]) : uv.push((j / seg) * o.uv[0], v * o.uv[1]);
+      if (o.uv) {
+        // U runs the way lettering reads from outside
+        const ua = (1 - j / seg) * o.uv[0];
+        if (o.swap) uv.push(v * o.uv[1], ua);
+        else uv.push(ua, v * o.uv[1]);
+      }
       const sh = r.sh * (o.shade ? o.shade(a, v) : 1);
       if (sh !== 1) shaded = true;
       shade.push(sh);

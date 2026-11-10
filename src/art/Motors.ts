@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { M, color } from './Materials';
-import { ball, cyl, lathe, loft, model, Parts, pipe, q, rbox, Ring, torus, V3 } from './Model';
+import { ball, cyl, lathe, loft, model, Parts, pipe, q, rbox, Ring, V3 } from './Model';
 
 /**
  * Things with engines that aren't Hamish's: parked cars, the polis, the tram, the digger.
@@ -189,4 +189,3 @@ export function diggerModel() {
   });
 }
 
-export { torus };

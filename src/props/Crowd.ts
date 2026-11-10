@@ -3,7 +3,7 @@ import { RAPIER, Entity } from '../core/Physics';
 import { G } from '../ctx';
 import { QUALITY } from '../core/Platform';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { M, color } from '../art/Materials';
+import { color } from '../art/Materials';
 import { ball, cyl, loft, model, Parts, q, rbox } from '../art/Model';
 import { theta, toWorld, toRoad, forward, right } from '../world/Road';
 import { bakeFigure, buildHuman, fanOutfit, wizardOutfit, influencerOutfit, marcherOutfit, poseRun, ghostOutfit, mimeOutfit, piperOutfit, poseFlail, poseSplat, poseStand, Rig, touristOutfit } from '../art/Humanoid';
