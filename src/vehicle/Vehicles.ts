@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { M, color, envReady } from '../art/Materials';
+import { M, color, envReady, mapMat } from '../art/Materials';
 import { canvas, signTex } from '../art/Textures';
 import { aim, ball, cyl, extrude, lathe, loft, model, Parts, pipe, q, rbox, torus, V3 } from '../art/Model';
 
-export type VehicleId = 'trolley' | 'blower' | 'scooter' | 'buggy' | 'bathtub';
+export type VehicleId = 'trolley' | 'blower' | 'scooter' | 'buggy' | 'gritter';
 
 export interface VehicleSpec {
   id: VehicleId;
@@ -481,105 +481,111 @@ const buggy: VehicleSpec = {
   },
 };
 
-// ------------------------------------------------------------------ bathtub
-const TUB_WHEELS: [number, number][] = [[0.62, 0.3], [0.62, -0.3], [-0.62, 0.3], [-0.62, -0.3]];
-const bathtub: VehicleSpec = {
-  id: 'bathtub',
-  name: 'The Clawfoot Bathtub',
-  blurb: 'Cast iron, castors on the feet, an outboard motor on the back and a rubber duck for luck. Will it float? (It will not.)',
-  engine: { accel: 4.8, top: 15.5, sound: 1.25, start: 'outboard' },
-  body: [0.82, 0.24, 0.38, 0.5, 260],
-  deck: [0.75, 0.05, 0.33, 0.2, 1400],
-  ballast: [0.45, 0.07, 0.25, 0.2, 3200],
-  riderCol: [-0.1, 1.02],
-  seat: [-0.1, 0.06, 0.32],
-  wheels: TUB_WHEELS,
-  wheelR: 0.1,
-  wheelY: 0.14,
-  suspRest: 0.24,
-  stiffness: 28,
-  travel: 0.2,
-  under: [0.9, 0.18, 0.42],
-  hop: 1.2,
-  grip: 1.9,
-  stats: { speed: 3, weight: 4, engine: 3 },
+// ------------------------------------------------------------------ the council gritter
+const GRIT_WHEELS: [number, number][] = [[1.15, 0.86], [1.15, -0.86], [-1.05, 0.86], [-1.05, -0.86]];
+const gritter: VehicleSpec = {
+  id: 'gritter',
+  name: 'Sir Saltalot, the Council Gritter',
+  blurb: 'Seven tonnes of council lorry with a snowplough on the front and a hopper of rock salt on the back. The roof came off under the Cowgate bridge. Nothing stops it.',
+  engine: { accel: 7, top: 23, sound: 0.55, start: 'gritter' },
+  body: [1.9, 0.48, 0.98, 0.78, 230],
+  deck: [1.7, 0.08, 0.92, 0.26, 1300],
+  ballast: [1.1, 0.1, 0.66, 0.14, 4200],
+  riderCol: [0.55, 1.6],
+  seat: [0.72, 0.72, 0.18],
+  wheels: GRIT_WHEELS,
+  wheelR: 0.42,
+  wheelY: 0.36,
+  suspRest: 0.3,
+  stiffness: 34,
+  travel: 0.22,
+  under: [1.9, 0.24, 1.0],
+  hop: 1.15,
+  grip: 3.6,
+  stats: { speed: 5, weight: 5, engine: 5 },
   build(g) {
     const p = new Parts();
-    const enamel = color(0xf6f4ee, 0.18, 0.1), outside = color(0x2a5a4a, 0.3, 0.3), gold = M.gold();
-    // a roll-top tub: painted cast iron outside, white enamel inside
-    const N = 2.7;
-    const tub = [
-      { t: 0.3, w: 0.26, d: 0.6 },
-      { t: 0.36, w: 0.335, d: 0.725 },
-      { t: 0.55, w: 0.385, d: 0.82 },
-      { t: 0.74, w: 0.4, d: 0.855 },
-      { t: 0.795, w: 0.415, d: 0.875 },
-    ];
-    p.add(loft(tub, { seg: q(32, 14), sub: 1, n: N, cap: ['flat', 'none'] }), outside);
-    // the inside is the same shape, a skin thinner and facing inwards
-    p.add(loft(tub.map((r, i) => ({ t: i ? r.t : 0.335, w: r.w - 0.028, d: r.d - 0.028 })), { seg: q(32, 14), sub: 1, n: N, cap: ['flat', 'none'] }), enamel, null, null, [1, 1, -1]);
-    const rim: V3[] = [];
-    for (let i = 0; i < 36; i++) {
-      const a = (i / 36) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
-      rim.push([Math.sign(c) * Math.abs(c) ** (2 / N) * 0.868, 0.8, Math.sign(s) * Math.abs(s) ** (2 / N) * 0.408]);
+    const orange = color(0xf07a12, 0.3, 0.2), yellow = color(0xf2c81e, 0.4, 0.2), dark = color(0x1a1b1e, 0.7), steel = color(0x3a3d42, 0.45, 0.7);
+    const chrome = color(0xc4c9cf, 0.28, 0.85), glass = color(0x1c2730, 0.12, 0.5), salt = color(0xd9d2c4, 0.95);
+    const sec = (t: number, w: number, y0: number, y1: number, n = 5) => ({ t, w, x: (y0 + y1) / 2, d: (y1 - y0) / 2, n });
+    // chassis: two rails, the fuel tank, mudguards over all four wheels
+    for (const z of [0.42, -0.42]) p.add(rbox(3.7, 0.16, 0.12, 0.02, 1), dark, [-0.05, 0.22, z]);
+    p.add(cyl(0.2, 0.2, 0.7, q(14, 8)), chrome, [0.1, 0.25, 0.72], [0, 0, Math.PI / 2]);
+    for (const [x, z] of GRIT_WHEELS) p.add(torus(0.5, 0.06, q(14, 8), 5, Math.PI), dark, [x, 0.16, z * 1.03]);
+    // the cab: square-nosed and open-topped, the roof sheared clean off under the Cowgate bridge
+    p.add(loft([sec(0.15, 0.98, 0.36, 0.62, 6), sec(1.76, 0.98, 0.36, 0.62, 6)], { axis: 'x', seg: q(20, 10), cap: 'flat' }), orange);
+    p.add(loft([sec(1.44, 0.98, 0.6, 1.06, 6), sec(1.68, 0.96, 0.6, 1.02, 5), sec(1.77, 0.9, 0.6, 0.96, 4)], { axis: 'x', seg: q(20, 10), cap: 'round', dome: 0.03 }), orange);
+    for (const z of [1, -1]) {
+      p.add(rbox(1.32, 0.46, 0.06, 0.02, 1), orange, [0.8, 0.83, z * 0.95]);
+      p.add(rbox(1.26, 0.34, 0.03, 0.01, 1), glass, [0.82, 1.23, z * 0.95]);
+      // the jagged line where the roof used to be
+      for (let i = 0; i < 8; i++) p.add(rbox(0.17, 0.05 + (i % 3) * 0.035, 0.07, 0.01, 1), orange, [0.24 + i * 0.165, 1.42 + (i % 3) * 0.015, z * 0.95], [i % 2 ? 0.25 : -0.2, 0, 0]);
+      for (const x of [0.2, 1.46]) p.add(rbox(0.08, 0.84, 0.08, 0.02, 1), orange, [x, 1.0, z * 0.95]);
+      p.add(rbox(0.05, 0.03, 0.03, 0.01, 1), chrome, [1.2, 0.98, z * 0.985]);
     }
-    p.add(pipe(rim, 0.032, { closed: true, seg: q(8, 5) }), enamel);
-    // claw feet
-    for (const [x, z] of TUB_WHEELS) {
-      p.add(loft([{ t: 0.2, w: 0.05, d: [0.06, 0.04] }, { t: 0.25, w: 0.07, d: [0.08, 0.06] }, { t: 0.33, w: 0.06, d: 0.06 }, { t: 0.4, w: 0.045, d: 0.045 }], { seg: q(10, 6), sub: 1, cap: 'round' }), gold, [x * 0.96, 0, z * 0.9], [0, x > 0 ? 0 : Math.PI, 0]);
-      for (const k of [-1, 0, 1]) p.add(ball(0.022, 6), gold, [x * 0.96 + Math.sign(x) * 0.055, 0.215, z * 0.9 + k * 0.03]);
+    p.add(rbox(0.06, 0.84, 1.96, 0.02, 1), orange, [0.18, 1.0, 0]);
+    p.add(rbox(0.05, 0.36, 1.86, 0.02, 1), glass, [1.47, 1.24, 0], [0, 0, -0.12]);
+    for (let i = 0; i < 7; i++) p.add(rbox(0.06, 0.05, 0.2, 0.01, 1), orange, [1.47, 1.43 + (i % 2) * 0.02, -0.75 + i * 0.25], [0.2 * (i % 3 - 1), 0, 0]);
+    // inside: floor, dash, wheel, the driver's seat
+    p.add(rbox(1.24, 0.03, 1.84, 0.01, 1), dark, [0.82, 0.63, 0]);
+    p.add(rbox(0.16, 0.36, 1.84, 0.03), dark, [1.36, 0.86, 0]);
+    p.add(torus(0.2, 0.025, q(16, 8), 5), dark, [1.18, 1.14, 0.42], [0, Math.PI / 2, -0.6]);
+    p.add(pipe([[1.36, 0.95, 0.42], [1.2, 1.12, 0.42]], 0.025, { seg: 5 }), dark);
+    p.add(rbox(0.46, 0.12, 0.62, 0.04), dark, [0.6, 0.9, 0]);
+    p.add(rbox(0.12, 0.62, 0.62, 0.04), dark, [0.32, 1.2, 0], [0, 0, 0.18]);
+    // the front: grille, lamps, a big bumper and the orange beacons on the windscreen header
+    p.add(rbox(0.04, 0.42, 1.1, 0.02), dark, [1.77, 0.78, 0]);
+    for (let i = 0; i < 5; i++) p.add(rbox(0.02, 0.03, 1.0, 0.01, 1), steel, [1.79, 0.62 + i * 0.08, 0]);
+    for (const z of [1, -1]) {
+      p.add(rbox(0.06, 0.16, 0.26, 0.04), M.emissive(0xfff2c0, 1.2), [1.77, 0.58, z * 0.7]);
+      p.add(cyl(0.09, 0.1, 0.14, q(10, 6)), M.emissive(0xff8a1a, 1.4), [0.18, 1.5, z * 0.82]);
+      p.add(cyl(0.025, 0.025, 0.5, 6), chrome, [1.6, 1.3, z * 1.05]);
+      p.add(rbox(0.04, 0.32, 0.2, 0.02), chrome, [1.6, 1.5, z * 1.12]);
     }
-    // water (still in it) and a head of bubbles
-    p.add(loft([{ t: 0.62, w: 0.366, d: 0.8 }, { t: 0.622, w: 0.366, d: 0.8 }], { seg: q(32, 14), n: N }), new THREE.MeshStandardMaterial({ color: 0x8fc4d8, transparent: true, opacity: 0.72, roughness: 0.05 }));
-    const foam = color(0xffffff, 0.35);
-    for (let i = 0; i < 14; i++) {
-      const a = i * 2.4, r = 0.05 + (i % 5) * 0.04;
-      p.add(ball(0.035 + (i % 3) * 0.018, q(8, 5)), foam, [-0.48 + Math.cos(a) * r * 1.2, 0.635 + (i % 2) * 0.02, Math.sin(a) * r]);
-    }
-    // pillar taps over the front end
-    for (const z of [-0.11, 0.11]) {
-      p.add(lathe([[0.03, 0], [0.022, 0.03], [0.018, 0.14], [0.026, 0.16], [0.026, 0.19], [0.012, 0.2]], q(10, 6), { cap: 'none' }), gold, [0.84, 0.8, z]);
-      p.add(pipe([[0.84, 0.95, z], [0.78, 0.985, z], [0.7, 0.97, z], [0.68, 0.92, z]], 0.014, { seg: 6, curve: true }), gold);
-      for (const a of [0, Math.PI / 2]) p.add(cyl(0.007, 0.007, 0.075, 5), gold, [0.84, 1.01, z], [Math.PI / 2, a, 0]);
-      p.add(ball(0.013, 6), color(z > 0 ? 0xc4161c : 0x1e6fd0, 0.4), [0.84, 1.02, z]);
-    }
-    // the rubber duck, for luck
-    const yellow = color(0xffd23f, 0.35);
-    const duck = new Parts();
-    duck.add(loft([{ t: -0.1, w: 0.02, d: [0.05, 0.0], x: 0.03 }, { t: -0.05, w: 0.06, d: [0.05, 0.04] }, { t: 0.03, w: 0.068, d: [0.05, 0.05] }, { t: 0.09, w: 0.04, d: [0.04, 0.035] }], { axis: 'x', seg: q(10, 6), sub: 1, cap: 'round' }), yellow);
-    duck.add(ball(0.05, q(10, 6)), yellow, [0.07, 0.085, 0]);
-    duck.add(loft([{ t: 0.1, w: 0.024, d: 0.012 }, { t: 0.15, w: 0.018, d: 0.006 }], { axis: 'x', seg: 6, cap: 'round' }), color(0xff7a1a, 0.4), [0, 0.078, 0]);
-    for (const z of [-1, 1]) duck.add(ball(0.009, 5), color(0x111111, 0.3), [0.1, 0.1, z * 0.034]);
-    p.sub(duck, [0.46, 0.665, 0.17], [0, 0.6, 0]);
-    // the outboard: clamp, cowling, tiller, leg and gearcase
-    const blue = color(0x1b3f8a, 0.25, 0.2), leg = color(0x2a2c30, 0.4, 0.6);
-    p.add(rbox(0.1, 0.16, 0.2, 0.02), leg, [-0.9, 0.78, 0]);
-    p.add(loft([{ t: 0.82, w: 0.11, d: [0.13, 0.14] }, { t: 0.9, w: 0.135, d: [0.16, 0.17] }, { t: 1.06, w: 0.13, d: [0.15, 0.17] }, { t: 1.13, w: 0.09, d: [0.1, 0.13] }], { seg: q(14, 8), sub: 1, n: 3, cap: 'round', dome: 0.03 }), blue, [-1.0, 0, 0]);
-    p.add(loft([{ t: 0.93, w: 0.137, d: [0.162, 0.172] }, { t: 0.96, w: 0.137, d: [0.162, 0.172] }], { seg: q(14, 8), n: 3, cap: 'none' }), M.white(), [-1.0, 0, 0]);
-    p.add(pipe([[-0.86, 0.9, 0.05], [-0.62, 0.96, 0.08]], 0.014, { seg: 6 }), leg);
-    p.add(cyl(0.022, 0.022, 0.12, 8), color(0x121214, 0.8), [-0.6, 0.965, 0.082], [0, 0.08, Math.PI / 2 - 0.24]);
-    p.add(loft([{ t: 0.2, w: 0.03, d: [0.05, 0.07] }, { t: 0.82, w: 0.04, d: [0.06, 0.08] }], { seg: 8, cap: 'flat' }), leg, [-1.0, 0, 0]);
-    p.add(rbox(0.26, 0.012, 0.16, 0.005, 1), leg, [-1.02, 0.3, 0]);
-    p.add(loft([{ t: -0.14, w: 0.03, d: 0.03 }, { t: -0.06, w: 0.05, d: 0.05 }, { t: 0.06, w: 0.045, d: 0.045 }, { t: 0.14, w: 0.012, d: 0.012 }], { axis: 'x', seg: 8, sub: 1, cap: 'round' }), leg, [-1.0, 0.16, 0]);
-    p.add(extrude([[-0.08, 0], [0.06, 0], [0.0, -0.12], [-0.05, -0.12]], 0.012), leg, [-1.0, 0.13, 0]);
+    p.add(rbox(0.22, 0.24, 2.0, 0.05), dark, [1.86, 0.32, 0]);
+    // the plough: a curved steel blade in chevrons, on two push arms
+    p.add(loft([{ t: -1.18, w: 0.3, d: [0.14, 0.02], x: 0.36 }, { t: 1.18, w: 0.3, d: [0.14, 0.02], x: 0.36 }], { axis: 'z', seg: 10, n: 2.2 }), yellow, [2.12, 0, 0], [0, 0.0, 0]);
+    for (let i = 0; i < 6; i++) p.add(rbox(0.02, 0.36, 0.14, 0.004, 1), dark, [2.27, 0.36, -1.0 + i * 0.4], [i % 2 ? 0.5 : -0.5, 0, 0]);
+    p.add(rbox(0.08, 0.08, 2.36, 0.02), steel, [2.24, 0.06, 0]);
+    for (const z of [0.5, -0.5]) p.add(pipe([[1.86, 0.3, z], [2.1, 0.32, z]], 0.06, { seg: 6 }), dark);
+    // the salt hopper: a V-bottomed bin behind the cab, salt heaped in it, the spreader chute below
+    p.add(loft([sec(-1.86, 0.78, 0.36, 1.35, 6), sec(0.08, 0.86, 0.36, 1.42, 6)], { axis: 'x', seg: q(16, 8), cap: 'flat' }), yellow);
+    for (const x of [-1.72, -1.3, -0.4, 0.0]) p.add(rbox(0.06, 1.0, 1.78, 0.02, 1), orange, [x, 0.9, 0]);
+    p.add(loft([sec(-1.8, 0.7, 1.28, 1.48, 3), sec(-1.0, 0.76, 1.28, 1.6, 3), sec(-0.2, 0.78, 1.28, 1.55, 3), sec(0.02, 0.7, 1.28, 1.42, 3)], { axis: 'x', seg: q(14, 8), cap: 'round', dome: 0.04 }), salt);
+    p.add(rbox(0.36, 0.3, 0.3, 0.04), dark, [-1.9, 0.38, 0]);
+    // exhaust stack up the back of the cab
+    p.add(pipe([[0.1, 0.4, -0.9], [0.1, 1.95, -0.9]], 0.06, { seg: 8 }), chrome);
+    p.add(cyl(0.065, 0.07, 0.08, 8), dark, [0.1, 1.98, -0.9]);
     p.build(g);
-    // the propeller
-    const pr = new Parts();
-    pr.add(lathe([[0.0001, 0], [0.03, 0.01], [0.034, 0.05], [0.02, 0.09], [0.0001, 0.1]], 8), M.steel(), null, BACK);
-    for (let i = 0; i < 3; i++) {
-      pr.add(loft([{ t: 0.02, w: 0.02, d: 0.006 }, { t: 0.07, w: 0.045, d: 0.005 }, { t: 0.115, w: 0.03, d: 0.003 }], { seg: 6, sub: 1, cap: 'round', dome: 0.01 }), M.steel(),
-        new THREE.Matrix4().makeRotationX((i / 3) * Math.PI * 2).multiply(new THREE.Matrix4().makeTranslation(-0.045, 0, 0)).multiply(new THREE.Matrix4().makeRotationY(0.55)));
+    // his name, painted on the hopper and the doors, as is council tradition
+    const name = mapMat(signTex(['SIR SALTALOT'], '#f2c81e', '#14284a', 512, 96, 'Arial Black'));
+    for (const z of [1, -1]) {
+      const n = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.16), name);
+      n.position.set(-0.85, 1.0, z * 0.885);
+      if (z < 0) n.rotation.y = Math.PI;
+      g.add(n);
+      const d = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.22), mapMat(signTex(['EDINBURGH', 'ROADS DEPT.'], '#f07a12', '#14284a', 256, 80)));
+      d.position.set(0.8, 0.82, z * 0.985);
+      if (z < 0) d.rotation.y = Math.PI;
+      g.add(d);
     }
-    const prop = pr.build(new THREE.Group());
-    prop.position.set(-1.14, 0.16, 0);
-    g.add(prop);
+    // the spreader: a ribbed disc under the tail, spinning flat (the spinner turns about its own X)
+    const sp = new Parts();
+    sp.add(cyl(0.3, 0.3, 0.03, q(16, 8)), steel, null, [0, 0, Math.PI / 2]);
+    for (let i = 0; i < 4; i++) sp.add(rbox(0.06, 0.28, 0.03, 0.01, 1), yellow, new THREE.Matrix4().makeRotationX((i / 4) * Math.PI * 2).multiply(new THREE.Matrix4().makeTranslation(0.03, 0.14, 0)));
+    const spinner = sp.build(new THREE.Group());
+    const mount = new THREE.Group();
+    mount.rotation.z = Math.PI / 2;
+    mount.position.set(-1.98, 0.14, 0);
+    mount.add(spinner);
+    g.add(mount);
     const exhaust = new THREE.Object3D();
-    exhaust.position.set(-1.05, 0.9, 0);
+    exhaust.position.set(0.1, 2.05, -0.9);
     g.add(exhaust);
-    const parts = wheelsAndSprings(g, this, 0.05, castor(gold), 0.035, 0.22);
-    return { ...parts, spinner: prop, exhaust };
+    const parts = wheelsAndSprings(g, this, 0.3, { tyre: color(0x141416, 0.85), hub: color(0xe8e4dc, 0.35, 0.3), spokes: 6, tread: true }, 0.08, 0.6);
+    return { ...parts, spinner, exhaust };
   },
 };
 
-export const VEHICLES: Record<VehicleId, VehicleSpec> = { trolley, blower, scooter, buggy, bathtub };
-export const VEHICLE_ORDER: VehicleId[] = ['trolley', 'blower', 'scooter', 'buggy', 'bathtub'];
+export const VEHICLES: Record<VehicleId, VehicleSpec> = { trolley, blower, scooter, buggy, gritter };
+export const VEHICLE_ORDER: VehicleId[] = ['trolley', 'blower', 'scooter', 'buggy', 'gritter'];

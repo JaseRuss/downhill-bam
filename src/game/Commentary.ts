@@ -62,7 +62,7 @@ const LINES: Record<string, string[]> = {
   engine_blower: ["He's pulled the cord! Leaf blower ENGAGED!", "Listen tae that two-stroke! The neighbours will love it."],
   engine_scooter: ["Granny's scooter is up tae... four miles an hour. No, wait, he's took the limiter off!", "Mobility scooter, full beans!"],
   engine_buggy: ["The buggy's away! Fore!", "Electric golf buggy, unleashed on the public highway!"],
-  engine_outboard: ["He's started the outboard. On a road. In a bath.", "The bathtub's got a motor! Of course it has!"],
+  engine_gritter: ["He's fired up the gritter! Seven tonnes of council property, heading for Princes Street!", "Sir Saltalot is ROLLING! Clear the road! Clear the CITY!"],
   stalled: ["No engine and nae hill. That's that, then.", "He's run out o' downhill!"],
   grassmarket: ["Into the Grassmarket! Mind the drinkers!", "The beer garden's open. Not for long."],
   pints: ["That's a lot of spilt pints. There'll be a riot.", "Somebody's going tae want a refill."],

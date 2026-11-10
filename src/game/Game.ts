@@ -339,7 +339,7 @@ export class Game {
       const owned = d.vehicles.includes(id);
       const card = document.createElement('div');
       card.className = `car${owned ? '' : ' locked'}${id === sel ? ' sel' : ''}`;
-      const dots = (n: number) => '●'.repeat(n) + '○'.repeat(Math.max(0, 4 - n));
+      const dots = (n: number) => '●'.repeat(n) + '○'.repeat(Math.max(0, 5 - n));
       if (owned) {
         card.innerHTML = `<h4>${v.name}</h4><div class="stats">SPEED ${dots(v.stats.speed)}<br/>WEIGHT ${dots(v.stats.weight)}<br/>ENGINE ${v.engine ? dots(v.stats.engine) : 'none'}</div><div class="blurb">${v.blurb}</div>`;
         card.addEventListener('click', () => {

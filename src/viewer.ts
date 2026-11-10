@@ -321,7 +321,7 @@ const MODELS: Record<string, () => void> = {
   blower: () => vehicle('blower'),
   scooter: () => vehicle('scooter'),
   buggy: () => vehicle('buggy'),
-  bathtub: () => vehicle('bathtub'),
+  gritter: () => vehicle('gritter'),
   hamish: () => {
     person(H.hamishOutfit(), 0);
   },
