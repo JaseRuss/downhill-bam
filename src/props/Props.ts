@@ -228,7 +228,8 @@ export function bench(s: number, u: number) {
 }
 
 export function barrier(s: number, u: number, yaw = 0) {
-  return G.destruction.add(toWorld(s, u, 0.58), theta(s) + yaw, [1.1, 0.55, 0.12], {
+  // the collider is as deep as the feet: a thin one toppled at a touch and lay with its feet in the cobbles
+  return G.destruction.add(toWorld(s, u, 0.58), theta(s) + yaw, [1.1, 0.55, 0.33], {
     visual: barrierModel(), dynamic: true, density: 120, points: 30, label: 'Crowd Barrier', sound: 'metal', restitution: 0.3,
   });
 }

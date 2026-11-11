@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { G } from './ctx';
 import * as Road from './world/Road';
 import { GOALS } from './game/Career';
@@ -177,5 +178,5 @@ export function installDebug(game: any) {
       staticMeshes: sMeshes, staticTris: Math.round(sTris), staticMB: +(sBytes / 1048576).toFixed(1), avgCalls: Math.round(calls / points), worstCalls: worst, avgDrawnTris: Math.round(drawn / points), views,
     };
   };
-  Object.assign(w, { F, key, press, ru, hd, launchOnly, drive, autopilot, setCareer, stats, Road, game });
+  Object.assign(w, { F, key, press, ru, hd, launchOnly, drive, autopilot, setCareer, stats, Road, game, __THREE: THREE });
 }

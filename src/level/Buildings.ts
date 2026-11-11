@@ -358,8 +358,11 @@ export function sideStreet(s: number, side: 1 | -1, name: string, angle = 90, wi
   addStatic(road);
   // buildings down both sides of it
   const r = rng(seed * 31 + 7);
+  // the first stretch of each side is the main street's own lands, seen end-on: start behind them
+  // (overlapping them left two walls in the same plane, flickering)
+  const START = 10.6;
   for (const k of [-1, 1]) {
-    let d = 0;
+    let d = START;
     while (d < len) {
       const w = Math.min(len - d, 7 + r() * 6);
       const h = 12 + r() * 9;
@@ -373,7 +376,7 @@ export function sideStreet(s: number, side: 1 | -1, name: string, angle = 90, wi
       const fm = new THREE.MeshStandardMaterial({ map, emissiveMap: em, emissive: 0xffffff, emissiveIntensity: 0.85, roughness: 0.9 });
       const plain = M.stone(30, 40, 3);
       const lateral = new THREE.Vector3(dir.z, 0, -dir.x).multiplyScalar(k * (width / 2 + 4.5));
-      const centre = mouth.clone().addScaledVector(dir, d + w / 2 + 1.5).add(lateral);
+      const centre = mouth.clone().addScaledVector(dir, d + w / 2).add(lateral);
       // on a stub that leaves at a shallow angle, the near row would swing back over the main
       // street: leave out any land whose footprint reaches into it
       if (intrudes(centre, dir, 4.5, w / 2)) {
@@ -396,6 +399,37 @@ export function sideStreet(s: number, side: 1 | -1, name: string, angle = 90, wi
       addStatic(blk);
       d += w;
     }
+  }
+  // and a land across the far end, so looking up the street you see buildings, not sky
+  {
+    const r2 = rng(seed * 17 + 3);
+    const across = width + 18, h = 17 + r2() * 5;
+    const [fmap, femit] = facadeTex(30, 44, 2);
+    const map = fmap.clone();
+    map.repeat.set(across / 12, h / 12.8);
+    map.needsUpdate = true;
+    const em = femit.clone();
+    em.repeat.copy(map.repeat);
+    em.needsUpdate = true;
+    const fm = new THREE.MeshStandardMaterial({ map, emissiveMap: em, emissive: 0xffffff, emissiveIntensity: 0.85, roughness: 0.9 });
+    const plain = M.stone(30, 40, 3);
+    const blk = new THREE.Group();
+    blk.position.copy(mouth).addScaledVector(dir, len + 4.5);
+    blk.position.y = y - 0.6 + h / 2;
+    blk.rotation.y = yaw;
+    // facing back down the side street (local -z points at the route)
+    const m = new THREE.Mesh(new THREE.BoxGeometry(across, h, 9), [plain, plain, M.slate(), plain, plain, fm]);
+    m.castShadow = true;
+    blk.add(m);
+    // the ridge runs across the end of the street
+    const rp = new Parts();
+    const rise = roofOver(rp, plain, 9, across, h / 2, false);
+    chimney(rp, plain, dressed(30, 48), h / 2 + 0.3 + rise, 0, 4);
+    const rg = new THREE.Group();
+    rg.rotation.y = Math.PI / 2;
+    rp.build(rg);
+    blk.add(rg);
+    addStatic(blk);
   }
   // street sign on the corner
   const sg = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.45), new THREE.MeshStandardMaterial({ map: signTex([name], '#f4f1e6', '#111', 384, 72, 'Lilita One, Arial Black') }));

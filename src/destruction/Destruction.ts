@@ -80,7 +80,11 @@ export class Part implements Entity {
     }
     if (load >= hitLoad) {
       if (!this.scored && (o.points ?? 0) > 0) this.d.scorePart(this, byTrolley);
-      if (G.time - this.lastSound > 0.25) {
+      // resting on the ground, a prop's contacts flicker on and off all day: only a real fall clatters
+      const v = this.body.linvel(), w = this.body.angvel();
+      const moving = Math.hypot(v.x, v.y, v.z) > 1.2 || Math.hypot(w.x, w.y, w.z) > 3;
+      const ground = !other || other.kind === 'terrain';
+      if (G.time - this.lastSound > 0.25 && (moving || !ground)) {
         this.lastSound = G.time;
         G.sfx.impact(Math.min(1, load / 400), o.sound ?? (o.glass ? 'glass' : 'wood'));
       }

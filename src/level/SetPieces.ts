@@ -243,7 +243,8 @@ function mannequin(s: number, u: number, tartan: 'red' | 'green' | 'blue' | 'dre
     return p.build();
   });
   return G.destruction.add(toWorld(s, u, 0.98), theta(s), [0.2, 0.97, 0.15], {
-    visual: g, dynamic: true, density: 60, points: 120, label: 'Mannequin', sound: 'soft', restitution: 0.3,
+    // stands fixed in its window until something hits it (loose, it toppled at the slightest nudge)
+    visual: g, release: 4, density: 60, points: 120, label: 'Mannequin', sound: 'soft', restitution: 0.3,
   });
 }
 
