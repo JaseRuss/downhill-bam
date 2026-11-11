@@ -242,6 +242,38 @@ export function tenement(s0: number, width: number, side: 1 | -1, height: number
   return g;
 }
 
+/**
+ * A back land: a block of tenements set behind the street line, windowed all round. On the outside
+ * of a bend, straight-fronted lands fan apart and leave wedges you can see sky through: these fill them.
+ */
+export function backLand(s: number, u: number, along: number, across: number, h: number, seed = 1) {
+  const r = rng(seed * 13 + 5);
+  const [fmap, femit] = facadeTex(28 + Math.floor(r() * 3) * 4, 40 + Math.floor(r() * 3) * 4, 1 + Math.floor(r() * 3));
+  const face = (w: number) => {
+    const map = fmap.clone();
+    map.repeat.set(w / 12, h / 12.8);
+    map.needsUpdate = true;
+    const em = femit.clone();
+    em.repeat.copy(map.repeat);
+    em.needsUpdate = true;
+    return new THREE.MeshStandardMaterial({ map, emissiveMap: em, emissive: 0xffffff, emissiveIntensity: 0.85, roughness: 0.9 });
+  };
+  const sideM = face(across), endM = face(along);
+  const g = roadGroup(s, u, 0);
+  g.position.y = baseH(s) - 0.6 + h / 2;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(across, h, along), [sideM, sideM, M.slate(), M.stone(30, 40, 3), endM, endM]);
+  m.castShadow = true;
+  g.add(m);
+  const rp = new Parts();
+  const plain = M.stone(30, 40, 3);
+  const rise = roofOver(rp, plain, across, along, h / 2, false, 0.3);
+  chimney(rp, plain, dressed(30, 48), h / 2 + 0.3 + rise, along / 4, 4);
+  chimney(rp, plain, dressed(30, 48), h / 2 + 0.3 + rise, -along / 4, 4);
+  rp.build(g);
+  addStatic(g);
+  return g;
+}
+
 /** A narrow close between lands: dark passage with a back wall and a name plate. */
 export function close(s: number, side: 1 | -1, width: number, name: string) {
   const g = roadGroup(s + width / 2, side * (HALF_STREET + 3), 0);

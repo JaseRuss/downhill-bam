@@ -11,7 +11,7 @@ import * as Road from '../world/Road';
 import {
   MARKS, JOIN_S, HALF_ROAD, HALF_STREET, baseH, theta, toWorld, toWorldAbs, toRoad, roadGroup, right, forward, edgeL, edgeR, H,
 } from '../world/Road';
-import { buildStreet, guideWalls, sideStreet, tenement, staticBox, Reserved, StreetStyle } from './Buildings';
+import { backLand, buildStreet, guideWalls, sideStreet, tenement, staticBox, Reserved, StreetStyle } from './Buildings';
 import * as SP from './SetPieces';
 import { bx, cyl, cone, once, crenellate, stall, staticRamp } from './SetPieces';
 import { barrier, bench, bollard, communalBin, lampPost, aBoard, cone as coneProp, scaffold, yawQ } from '../props/Props';
@@ -658,6 +658,11 @@ function balmoral() {
   const g = roadGroup(s, e + 12, 0);
   g.position.y = baseH(s) - 0.6;
   g.add(LM2.balmoralModel());
+  // back lands round the outside of the turn into Leith Street, behind the Balmoral and the
+  // Playhouse corner, so the gaps between their straight fronts show buildings, not sky
+  backLand(s + 10, e + 16, 22, 18, 22, 1);
+  backLand(MARKS.leithst + 6, edgeR(MARKS.leithst + 6) + 15, 20, 18, 21, 2);
+  backLand(MARKS.leithst + 18, edgeR(MARKS.leithst + 18) + 17, 16, 18, 20, 3);
   const sm = mapMat(signTex(['THE BALMORAL'], '#14284a', '#f2c14e', 512, 80, 'Georgia'));
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(9, 1.3), sm);
   sign.position.set(11.05, 8, 0);
@@ -920,6 +925,29 @@ function shore() {
   }
   for (let s = sA + 6; s < sB - 10; s += 22) G.crowd.pigeons(s, edgeR(s) - 1.0, 6, true);
   for (let s = sA + 12; s < sB - 14; s += 26) bench(s, edgeR(s) - 1.0);
+
+  // golden hour on Starbank: influencers lined up along the sea wall with the Forth behind them,
+  // and a few braver ones out in the road for the better angle
+  const posers: { scored: boolean }[] = [];
+  const pr = rng(1432);
+  for (let i = 0, s = sA + 3; s < sB - 12; i++, s += 6.5 + pr() * 3) {
+    const inRoad = i % 3 === 2;
+    const u = inRoad ? 0.6 + pr() * 2.6 : edgeR(s) - 1.1 - pr() * 0.5;
+    if (!inRoad && posers.length && Math.abs(((s - sA - 12) % 26) - 0) < 1.6) continue; // not on a bench
+    const t = G.crowd.tourist(s, u, 'influencer', 0, 'Influencer', 150);
+    // backs to the sea, phones out towards the road (and whatever's coming down it)
+    const f = right(s).multiplyScalar(-1).addScaledVector(forward(s), (pr() - 0.5) * 0.8);
+    t.faceYaw = Math.atan2(-f.z, f.x);
+    posers.push(t);
+  }
+  const sunset = once(() => {
+    G.scoring.award('SUNSET FILTER!', 1200, G.trolley.position.add(new THREE.Vector3(0, 2.5, 0)), true, 'influencers');
+    G.commentary.show("Five sunset selfies ruined! #nofilter #nobrakes", 3.5);
+  });
+  G.updaters.push(() => {
+    if (posers.filter((p) => p.scored).length >= 5) sunset();
+  });
+  trigger(sA - 25, () => G.commentary.show("Golden hour on Starbank Road. Every influencer in Leith is out for the sunset. Oh no.", 3.5));
 
   // the slipway: a full-width ramp at the very end, straight into the Forth
   const sEnd = MARKS.end - 1.5;
