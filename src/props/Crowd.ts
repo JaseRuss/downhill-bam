@@ -6,10 +6,10 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { color } from '../art/Materials';
 import { ball, cyl, loft, model, Parts, q, rbox } from '../art/Model';
 import { theta, toWorld, toRoad, forward, right } from '../world/Road';
-import { bakeFigure, buildHuman, fanOutfit, wizardOutfit, influencerOutfit, marcherOutfit, poseRun, ghostOutfit, mimeOutfit, piperOutfit, poseFlail, poseSplat, poseStand, Rig, touristOutfit } from '../art/Humanoid';
-import { bagpipes, bumbag, camera, lantern, phone, pointyHat, scarf, shades, specs, umbrella, wand } from '../art/Accessories';
+import { bakeFigure, buildHuman, cyclistOutfit, fanOutfit, wizardOutfit, influencerOutfit, marcherOutfit, poseRun, ghostOutfit, mimeOutfit, piperOutfit, poseFlail, poseSplat, poseStand, Rig, touristOutfit } from '../art/Humanoid';
+import { bagpipes, bicycle, bumbag, camera, helmet, lantern, phone, pointyHat, scarf, shades, specs, umbrella, wand } from '../art/Accessories';
 
-export type TouristKind = 'tourist' | 'ghost' | 'mime' | 'piper' | 'hearts' | 'hibs' | 'wizard' | 'influencer' | 'marcher';
+export type TouristKind = 'tourist' | 'ghost' | 'mime' | 'piper' | 'hearts' | 'hibs' | 'wizard' | 'influencer' | 'marcher' | 'cyclist';
 
 /** How a wee marcher behaves: walking back and forth across the street, blocking, or floating down. */
 export type MarchRole = 'walker' | 'blocker' | 'floater';
@@ -38,13 +38,20 @@ class Tourist implements Entity {
   private walkU: [number, number] = [0, 0];
   private walkDir = 1;
   private umbrella: THREE.Object3D | null = null;
+  /** Cyclists: the bike, and the lane they ride down (u), at what speed. */
+  private bike: THREE.Object3D | null = null;
+  private laneU = 0;
+  private rideSpeed = 0;
+  private riding = false;
+  private stopAt = Infinity;
+  private parked = false;
   /** Far away and standing still: a low-detail copy, merged into one mesh per material. */
   private lod: THREE.Group | null = null;
   private lodOff = false;
 
   constructor(s: number, u: number, public type: TouristKind, public label: string, public points: number, yOff = 0) {
     const fan = type === 'hearts' || type === 'hibs';
-    const outfit = type === 'marcher' ? marcherOutfit() : type === 'wizard' ? wizardOutfit(Math.random) : type === 'influencer' ? influencerOutfit(Math.random) : fan ? fanOutfit(type, Math.random) : type === 'ghost' ? ghostOutfit() : type === 'mime' ? mimeOutfit() : type === 'piper' ? piperOutfit() : touristOutfit(Math.random);
+    const outfit = type === 'cyclist' ? cyclistOutfit(Math.random) : type === 'marcher' ? marcherOutfit() : type === 'wizard' ? wizardOutfit(Math.random) : type === 'influencer' ? influencerOutfit(Math.random) : fan ? fanOutfit(type, Math.random) : type === 'ghost' ? ghostOutfit() : type === 'mime' ? mimeOutfit() : type === 'piper' ? piperOutfit() : touristOutfit(Math.random);
     this.rig = buildHuman(outfit);
     this.half = this.rig.height / 2;
     const p = toWorld(s, u, this.half + yOff + 0.03);
@@ -73,7 +80,11 @@ class Tourist implements Entity {
   /** Bits and bobs: bagpipes, a lantern, a camera. */
   private props() {
     const r = this.rig;
-    if (this.type === 'piper') bagpipes(r);
+    if (this.type === 'cyclist') {
+      this.bike = bicycle(r, [0x1e6fd0, 0xc4161c, 0x2b8a3e, 0x161616, 0xf2f2ee, 0xff7a1a][Math.floor(Math.random() * 6)], Math.random() < 0.35);
+      r.root.add(this.bike);
+      helmet(r, [0xffd400, 0xf2f2f2, 0x1e6fd0, 0xff3b3b][Math.floor(Math.random() * 4)]);
+    } else if (this.type === 'piper') bagpipes(r);
     else if (this.type === 'ghost') lantern(r);
     else if (this.type === 'wizard') {
       specs(r);
@@ -136,6 +147,22 @@ class Tourist implements Entity {
     const launch = src.clone().setY(0).multiplyScalar(1.35).add(new THREE.Vector3((Math.random() - 0.5) * 4, 7 + Math.random() * 6, (Math.random() - 0.5) * 4));
     this.body.setLinvel({ x: launch.x, y: launch.y, z: launch.z }, true);
     this.body.setAngvel({ x: (Math.random() - 0.5) * 30, y: (Math.random() - 0.5) * 16, z: (Math.random() - 0.5) * 30 }, true);
+    // the bike goes one way, the rider the other
+    if (this.bike && this.bike.parent) {
+      const wp = new THREE.Vector3(), wq = new THREE.Quaternion();
+      this.bike.getWorldPosition(wp);
+      this.bike.getWorldQuaternion(wq);
+      this.bike.parent.remove(this.bike);
+      const sc = this.bike.scale.x;
+      const holder = new THREE.Group();
+      this.bike.position.set(0, -0.55 * sc, 0);
+      this.bike.quaternion.identity();
+      holder.add(this.bike);
+      const part = G.destruction.add(wp.add(new THREE.Vector3(0, 0.55 * sc, 0)), wq, [0.8 * sc, 0.5 * sc, 0.12], { visual: holder, dynamic: true, density: 40, sound: 'metal', restitution: 0.4, label: 'Bike', points: 100 });
+      part.body.setLinvel({ x: launch.x * 0.8, y: launch.y * 0.6 + 2, z: launch.z * 0.8 }, true);
+      part.body.setAngvel({ x: (Math.random() - 0.5) * 14, y: (Math.random() - 0.5) * 10, z: (Math.random() - 0.5) * 14 }, true);
+      this.bike = null;
+    }
     // the hat goes its own way
     const hat = this.rig.hat;
     if (hat && hat.parent) {
@@ -168,6 +195,7 @@ class Tourist implements Entity {
   update(dt: number, trolleyPos: THREE.Vector3, trolleyVel: THREE.Vector3) {
     const t = this.body.translation();
     if (this.role && this.state === 'idle') this.marchStep(t);
+    if (this.type === 'cyclist' && this.state === 'idle') this.rideStep(t, trolleyPos);
     if (this.state === 'idle' && this.dodgeChance > 0) {
       const dx = t.x - trolleyPos.x, dz = t.z - trolleyPos.z;
       const d = Math.hypot(dx, dz);
@@ -202,6 +230,37 @@ class Tourist implements Entity {
       this.body.lockRotations(true, true);
       G.fx.dizzy(this.mesh, this.half + 0.15, 4);
     }
+  }
+
+  /** Put a cyclist in a lane at `u`, riding downhill at `speed` once the trolley gets near. */
+  cycle(u: number, speed: number, stopAt = Infinity) {
+    this.stopAt = stopAt;
+    this.laneU = u;
+    this.rideSpeed = speed;
+    this.dodgeChance = 0.1; // headphones in
+    this.lodOff = true;
+  }
+
+  private rideStep(t: { x: number; y: number; z: number }, trolleyPos: THREE.Vector3) {
+    if (this.parked) return;
+    const { s, u } = toRoad(t.x, t.z);
+    if (!this.riding) {
+      // wait at the lights until the trolley's on its way down the Walk
+      if ((t.x - trolleyPos.x) ** 2 + (t.z - trolleyPos.z) ** 2 > 70 * 70) return;
+      this.riding = true;
+    }
+    const v = this.body.linvel();
+    const F = forward(s), R = right(s);
+    // pull up before the crowd (the derby's for the player to wreck)
+    if (s > this.stopAt) {
+      this.riding = false;
+      this.parked = true;
+      this.body.setLinvel({ x: 0, y: v.y, z: 0 }, true);
+      return;
+    }
+    const steer = Math.max(-1, Math.min(1, (this.laneU - u) * 1.5));
+    this.body.setLinvel({ x: F.x * this.rideSpeed + R.x * steer, y: v.y, z: F.z * this.rideSpeed + R.z * steer }, true);
+    this.faceYaw = Math.atan2(-F.z, F.x);
   }
 
   /** Wee marchers: walk across the street, turn round at the kerb (or a blocker), never look up. */
@@ -311,6 +370,23 @@ class Tourist implements Entity {
       rig.chest.rotation.z = -0.18 + Math.sin(ph * 0.5) * 0.06;
       rig.head.rotation.z = 0.15;
       rig.root.position.y = -this.half + Math.abs(Math.sin(ph * 0.9)) * 0.06;
+    } else if (this.type === 'cyclist') {
+      // in the saddle, leaning on the bars, pedalling (or freewheeling till it's time to go)
+      const ph = this.riding ? this.bob * 7 : 0;
+      rig.pelvis.rotation.z = -0.32;
+      rig.chest.rotation.z = -0.25;
+      rig.head.rotation.z = 0.35;
+      rig.shoulderL.rotation.set(-0.12, 0, 1.15);
+      rig.shoulderR.rotation.set(0.12, 0, 1.15);
+      rig.elbowL.rotation.z = 0.25;
+      rig.elbowR.rotation.z = 0.25;
+      rig.hipL.rotation.set(0, 0, 1.0 + Math.sin(ph) * 0.42);
+      rig.hipR.rotation.set(0, 0, 1.0 - Math.sin(ph) * 0.42);
+      rig.kneeL.rotation.set(0, 0, -1.35 - Math.cos(ph) * 0.4);
+      rig.kneeR.rotation.set(0, 0, -1.35 + Math.cos(ph) * 0.4);
+      const crank = this.bike?.getObjectByName('crank');
+      if (crank) crank.rotation.z = -ph;
+      rig.root.position.y = -this.half + 0.06 * (rig.height / 1.75);
     } else if (this.photographer) {
       rig.shoulderR.rotation.set(0.1, 0, 1.55);
       rig.elbowR.rotation.z = 1.9;

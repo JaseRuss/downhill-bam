@@ -960,6 +960,17 @@ export function marcherOutfit(): Outfit {
   };
 }
 
+/** A commuter in lycra: something loud on top, black below. */
+export function cyclistOutfit(r: () => number): Outfit {
+  const pick = <T,>(a: T[]) => a[Math.floor(r() * a.length)];
+  return {
+    skin: color(pick(SKINS), 0.7), shirt: color(pick([0xffd400, 0x1e6fd0, 0xff3b8d, 0x35d06a, 0xff7a1a, 0xd8ff2a]), 0.35), longSleeves: r() < 0.5,
+    legs: r() < 0.6 ? 'shorts' : 'trousers', legMat: color(0x151518, 0.4), socks: color(0xf2f2f2, 0.8), shoes: color(pick([0xf2f2f2, 0x222222, 0xff3b3b]), 0.4),
+    hair: color(pick(HAIR), 0.9), hairStyle: pick(['short', 'short', 'bun', 'bald'] as HairStyle[]),
+    beard: r() < 0.2 ? color(pick(HAIR), 0.9) : undefined, build: 0.85 + r() * 0.2, height: 1.65 + r() * 0.25,
+  };
+}
+
 export function mimeOutfit(): Outfit {
   return {
     skin: color(0xf7f7f7, 0.6), shirt: M.stripes('#111111', '#f2f2f2'), longSleeves: true,

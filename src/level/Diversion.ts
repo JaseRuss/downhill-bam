@@ -776,47 +776,112 @@ function derby() {
   });
 }
 
-let ballMat: THREE.Material | null = null;
-/** A football's patches: black pentagons on white, wrapped round a sphere. */
-function footballMat() {
-  if (ballMat) return ballMat;
-  const c = document.createElement('canvas');
-  c.width = 256;
-  c.height = 128;
-  const g = c.getContext('2d')!;
-  g.fillStyle = '#f4f4f0';
-  g.fillRect(0, 0, 256, 128);
-  g.fillStyle = '#151515';
-  const pent = (x: number, y: number, r: number) => {
-    g.beginPath();
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
-      g.lineTo(x + Math.cos(a) * r * 1.6, y + Math.sin(a) * r); // stretched sideways to sit right on the sphere
+/**
+ * A proper football: twelve black pentagons and white hexagons, cut from a geodesic sphere (each
+ * face goes black if it's near one of the icosahedron's twelve corners), stitched with dark seams.
+ */
+function footballModel(big: boolean) {
+  return model(`football|${big}`, () => {
+    const r = big ? 1.0 : 0.16;
+    const geo = new THREE.IcosahedronGeometry(r, big ? 4 : 3).toNonIndexed();
+    const pos = geo.getAttribute('position');
+    const corners = new THREE.IcosahedronGeometry(1, 0).toNonIndexed().getAttribute('position');
+    const dirs: THREE.Vector3[] = [];
+    for (let i = 0; i < corners.count; i++) {
+      const d = new THREE.Vector3().fromBufferAttribute(corners, i).normalize();
+      if (!dirs.some((e) => e.distanceTo(d) < 1e-3)) dirs.push(d);
     }
-    g.fill();
-  };
-  for (let i = 0; i < 5; i++) {
-    pent(25 + i * 51.2, 32, 12);
-    pent(51 + i * 51.2, 96, 12);
-  }
-  pent(128, 5, 6);
-  pent(128, 123, 6);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  ballMat = new THREE.MeshStandardMaterial({ map: t, roughness: 0.45 });
-  return ballMat;
+    const black: number[] = [], white: number[] = [];
+    const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i += 3) {
+      a.fromBufferAttribute(pos, i); b.fromBufferAttribute(pos, i + 1); c.fromBufferAttribute(pos, i + 2);
+      const m = a.clone().add(b).add(c).normalize();
+      const near = Math.max(...dirs.map((d) => d.dot(m)));
+      const tri = [a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z];
+      (near > 0.948 ? black : white).push(...tri); // a pentagon's angular radius is about 18.6 degrees
+    }
+    const mk = (arr: number[]) => {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
+      // smooth normals: it's a ball
+      const n = new Float32Array(arr.length);
+      for (let i = 0; i < arr.length; i += 3) {
+        const l = Math.hypot(arr[i], arr[i + 1], arr[i + 2]);
+        n[i] = arr[i] / l; n[i + 1] = arr[i + 1] / l; n[i + 2] = arr[i + 2] / l;
+      }
+      g.setAttribute('normal', new THREE.BufferAttribute(n, 3));
+      return g;
+    };
+    const p = new Parts();
+    p.add(mk(black), color(0x121212, 0.45));
+    p.add(mk(white), color(0xf4f4f0, 0.4));
+    return p.build();
+  });
 }
 
-/** A football (or, scale 9, a fan zone's giant inflatable one): light and bouncy, it flies. */
+/** A football (or a fan zone's giant inflatable one): light and bouncy, it flies. */
 function football(s: number, u: number, big = false) {
   const r = big ? 1.0 : 0.16;
-  const m = new THREE.Mesh(new THREE.SphereGeometry(r, big ? 24 : 12, big ? 16 : 8), footballMat());
-  const g = new THREE.Group();
-  g.add(m);
   return G.destruction.add(toWorld(s, u, r + 0.02), Math.random() * 6, [r, r, r], {
-    shape: 'ball', visual: g, dynamic: true, density: big ? 3 : 60, restitution: big ? 0.85 : 0.75, friction: 0.5,
+    shape: 'ball', visual: footballModel(big), dynamic: true, density: big ? 3 : 60, restitution: big ? 0.85 : 0.75, friction: 0.5,
     points: big ? 300 : 25, label: big ? 'Giant Inflatable Ball' : 'Football', sound: 'soft', hitLoad: big ? 6 : 15,
   });
+}
+
+/** A green cycle lane down the left of Leith Walk, bike symbols painted on, cyclists in it. */
+function cycleLane(sA: number, sB: number, crowdAt: number) {
+  const uIn = -(HALF_ROAD - 1.75), uOut = -HALF_ROAD;
+  const green = new THREE.MeshStandardMaterial({ color: 0x2f8a4a, roughness: 0.85, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const paint = new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+  // the lane: a strip that follows the road surface, in 6 m lengths
+  for (let s = sA; s < sB && on(s); s += 6) {
+    const len = Math.min(6, sB - s);
+    const quad = (u0: number, u1: number, y = 0.012) => {
+      const pts: number[] = [];
+      const ref = toWorld(s, 0, 0);
+      for (const [ss, uu] of [[s, u0], [s, u1], [s + len, u0], [s + len, u1]]) {
+        const w = toWorld(ss, uu, y);
+        pts.push(w.x - ref.x, w.y - ref.y, w.z - ref.z);
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+      g.setIndex([0, 2, 1, 1, 2, 3]);
+      g.computeVertexNormals();
+      if (g.getAttribute('normal').getY(0) < 0) g.setIndex([0, 1, 2, 1, 3, 2]);
+      g.computeVertexNormals();
+      return g;
+    };
+    // plain meshes, not merged into vertex colour: they need their polygon offset to sit on the road
+    const g = new THREE.Group();
+    g.position.copy(toWorld(s, 0, 0));
+    g.add(new THREE.Mesh(quad(uOut, uIn), green), new THREE.Mesh(quad(uIn, uIn + 0.12, 0.014), paint));
+    g.children.forEach((m) => (m.receiveShadow = true));
+    add(g);
+  }
+  // a bike painted every 20 m
+  for (let s = sA + 8; s < sB - 2 && on(s); s += 20) {
+    const g = roadGroup(s, (uIn + uOut) / 2, 0);
+    g.position.y = H(s, (uIn + uOut) / 2) + 0.016;
+    for (const z of [-0.35, 0.35]) {
+      const w = new THREE.Mesh(new THREE.RingGeometry(0.19, 0.24, 16), paint);
+      w.rotation.x = -Math.PI / 2;
+      w.position.z = z;
+      g.add(w);
+    }
+    for (const [len, z, yaw] of [[0.6, 0, 0], [0.42, 0.1, 0.9]] as const) {
+      const bar = new THREE.Mesh(new THREE.PlaneGeometry(0.05, len), paint);
+      bar.rotation.set(-Math.PI / 2, 0, yaw);
+      bar.position.z = z;
+      g.add(bar);
+    }
+    add(g);
+  }
+  // commuters: they set off when they see the trolley coming, and keep going
+  const r = rng(1902);
+  for (let s = sA + 6; s < sB - 30 && on(s); s += 22 + r() * 14) {
+    const t = G.crowd.tourist(s, (uIn + uOut) / 2, 'cyclist', 0, 'Cyclist', 250);
+    t.cycle((uIn + uOut) / 2, 4.5 + r() * 2, s < crowdAt ? crowdAt - 8 : sB - 6);
+  }
 }
 
 /** Bunting across the street, lamp post to lamp post, in both sets of colours. */
@@ -853,6 +918,7 @@ function matchDay() {
   trigger(w0 - 10, () => G.commentary.say('matchday', true));
   const r = rng(1875);
   for (let s = w0 + 8; s < sEnd && on(s); s += 26) bunting(s);
+  cycleLane(w0 + 4, MARKS.foot - 10, sD);
 
   // fans walking down to the game, Hearts on the left pavement and Hibs on the right
   const lining = (sA: number, sB: number, gap: number) => {

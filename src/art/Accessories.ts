@@ -264,6 +264,86 @@ export function umbrella() {
   });
 }
 
+/** A cycle helmet: a vented shell with a peak. */
+export function helmet(r: Rig, hex: number) {
+  if (r.hat) r.hat.visible = false;
+  const g = model(`helmet|${hex}`, () => {
+    const p = new Parts();
+    const shell = color(hex, 0.3, 0.2), black = color(0x161616, 0.5);
+    const vents = (a: number, v: number) => (v > 0.35 && v < 0.85 && Math.sin(a * 5) > 0.6 ? 0.93 : 1);
+    p.add(loft([
+      { t: -0.62, w: 1.02, d: [1.06, 1.16] },
+      { t: -0.3, w: 1.1, d: [1.16, 1.28] },
+      { t: 0.1, w: 1.0, d: [1.08, 1.24], x: -0.06 },
+      { t: 0.32, w: 0.66, d: [0.7, 0.86], x: -0.1 },
+    ].map((k) => ({ ...k, t: k.t * R, w: k.w * R, x: (k.x ?? 0) * R, d: [k.d[0] * R, k.d[1] * R] as [number, number] })), { seg: q(18, 8), sub: 1, cap: ['flat', 'round'], dome: 0.1 * R, mod: vents }), shell);
+    p.add(rbox(0.5 * R, 0.06 * R, 1.3 * R, 0.03 * R, 1), black, hr(1.1, -0.42, 0), [0, 0, -0.25]);
+    for (const z of [-1, 1]) p.add(pipe([hr(0.2, -0.6, z * 0.95), hr(0.45, -1.3, z * 0.75), hr(0.55, -1.55, 0)], 0.025 * R, { seg: 4, curve: true }), black);
+    return p.build();
+  });
+  seatHat(g, scaleOf(r));
+  r.head.add(g);
+  return g;
+}
+
+/**
+ * A town bike for a rider of this height: wheels, a diamond frame, bars, saddle and a basket now
+ * and then. Built in the rider's space (feet at y = 0, facing +X); the cranks are named so they spin.
+ */
+export function bicycle(r: Rig, hex: number, basket: boolean) {
+  const s = scaleOf(r);
+  const g = model(`bike|${hex}|${basket}`, () => {
+    const p = new Parts();
+    const frame = color(hex, 0.3, 0.4), black = color(0x141416, 0.6), chrome = color(0xc4c9cf, 0.28, 0.85);
+    const R0 = 0.34, wy = R0, wx = 0.52;
+    for (const x of [-wx, wx]) {
+      p.add(torus(R0 - 0.02, 0.025, q(24, 12), 6), black, [x, wy, 0]);
+      p.add(torus(R0 - 0.05, 0.008, q(24, 12), 4), chrome, [x, wy, 0]);
+      for (let i = 0; i < 6; i++) p.add(cyl(0.003, 0.003, (R0 - 0.06) * 2, 3), chrome, [x, wy, 0], [0, 0, (i / 6) * Math.PI]);
+      p.add(cyl(0.025, 0.025, 0.08, 8), chrome, [x, wy, 0], [Math.PI / 2, 0, 0]);
+    }
+    // the diamond frame: seat tube, top tube, down tube, stays, fork, head tube
+    const BB: [number, number, number] = [-0.02, 0.3, 0], SEAT: [number, number, number] = [-0.16, 0.86, 0], HEAD: [number, number, number] = [0.4, 0.82, 0], HEADLO: [number, number, number] = [0.43, 0.66, 0];
+    for (const [a, b2] of [[BB, SEAT], [SEAT, HEAD], [BB, HEADLO], [HEAD, HEADLO]] as [number, number, number][][]) p.add(pipe([a, b2], 0.02, { seg: 6 }), frame);
+    for (const z of [-0.05, 0.05]) {
+      p.add(pipe([BB, [-wx, wy, z]], 0.012, { seg: 5 }), frame);
+      p.add(pipe([[SEAT[0] + 0.02, SEAT[1] - 0.04, 0], [-wx, wy, z]], 0.011, { seg: 5 }), frame);
+      p.add(pipe([HEADLO, [wx, wy, z]], 0.014, { seg: 5 }), chrome);
+    }
+    // saddle and post, bars and stem
+    p.add(pipe([SEAT, [SEAT[0] - 0.03, 0.97, 0]], 0.012, { seg: 5 }), chrome);
+    p.add(loft([{ t: -0.12, w: 0.08, d: 0.025 }, { t: 0.0, w: 0.07, d: 0.025 }, { t: 0.1, w: 0.025, d: 0.02 }], { axis: 'x', seg: 8, sub: 1, cap: 'round' }), black, [-0.2, 0.99, 0]);
+    p.add(pipe([HEAD, [0.37, 0.98, 0], [0.33, 1.0, 0]], 0.014, { seg: 5, bend: 0.03 }), chrome);
+    p.add(pipe([[0.36, 1.0, -0.27], [0.33, 1.0, 0], [0.36, 1.0, 0.27]], 0.012, { seg: 5, curve: true }), chrome);
+    for (const z of [-1, 1]) p.add(cyl(0.017, 0.017, 0.1, 8), black, [0.37, 1.0, z * 0.25], [Math.PI / 2, 0, 0]);
+    // mudguards and a bell
+    for (const x of [-wx, wx]) p.add(torus(R0 + 0.03, 0.012, q(16, 8), 4, Math.PI * 0.6), black, [x, wy, 0], [0, 0, x > 0 ? 0.6 : Math.PI * 0.4]);
+    p.add(cyl(0.022, 0.026, 0.02, 8), chrome, [0.34, 1.02, -0.17]);
+    if (basket) {
+      p.add(rbox(0.22, 0.16, 0.3, 0.02), color(0xb08a55, 0.85), [0.62, 0.93, 0]);
+      p.add(ball(0.06, 8), color(0x3a9a3a, 0.8), [0.62, 1.03, 0.05]);
+      p.add(cyl(0.025, 0.03, 0.2, 6), color(0xd8c070, 0.8), [0.6, 1.05, -0.07], [0.4, 0, 0.2]);
+    }
+    return p.build();
+  });
+  // the cranks and pedals turn
+  const crank = model('crank', () => {
+    const p = new Parts();
+    const black = color(0x141416, 0.6), chrome = color(0xc4c9cf, 0.28, 0.85);
+    p.add(cyl(0.09, 0.09, 0.012, q(16, 8)), chrome, [0, 0, 0.05], [Math.PI / 2, 0, 0]);
+    for (const z of [1, -1]) {
+      p.add(rbox(0.03, 0.17, 0.015, 0.006, 1), chrome, [0, z * 0.085, z * 0.08]);
+      p.add(rbox(0.1, 0.02, 0.07, 0.006, 1), black, [0, z * 0.17, z * 0.12]);
+    }
+    return p.build();
+  });
+  crank.name = 'crank';
+  crank.position.set(-0.02, 0.3, 0);
+  g.add(crank);
+  g.scale.setScalar(s);
+  return g;
+}
+
 /** Hi-vis and a cap, for traffic wardens and workies. */
 export function hiVis(r: Rig, vest: number, cap: number) {
   const bf = hefty(r);
