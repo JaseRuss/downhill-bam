@@ -79,8 +79,7 @@ export function staticRamp(sA: number, sB: number, u0: number, u1: number, rise:
  * A builder's-plank kicker ramp (planks on beer crates) whose lip ends at sEnd, for set pieces
  * you need to get airborne for. Chevron side boards and a sign make it obvious.
  */
-export function kicker(sEnd: number, u: number, len: number, height: number, signText: string[]) {
-  const hw = 0.95;
+export function kicker(sEnd: number, u: number, len: number, height: number, signText: string[], hw = 0.95) {
   staticRamp(sEnd - len, sEnd, u - hw, u + hw, height, M.planks());
   const chev = M.stripes('#f2c14e', '#161616');
   const top = H(sEnd, u) + height;
@@ -96,13 +95,14 @@ export function kicker(sEnd: number, u: number, len: number, height: number, sig
   }
   // beer crates holding up the high end
   const cg = roadGroup(sEnd - 0.35, u, 0);
-  for (const x of [-0.55, 0, 0.55]) {
+  for (let x = -hw + 0.4; x <= hw - 0.39; x += 0.55) {
     const n = Math.max(1, Math.floor(height / 0.3));
     for (let k = 0; k < n; k++) cg.add(bx(0.5, 0.28, 0.4, color(k % 2 ? 0x2b6a3a : 0xb22222, 0.7), x, 0.14 + k * 0.3, 0));
   }
   add(cg);
   // the sign: a board on a post beside the run-up
-  const sg = roadGroup(sEnd - len - 1.5, u + (u >= 0 ? -1.6 : 1.6), 0);
+  const signU = u + (u >= 0 ? -1 : 1) * (hw + 0.65); // beside the run-up, never in it
+  const sg = roadGroup(sEnd - len - 1.5, signU, 0);
   sg.add(cyl(0.04, 0.04, 1.6, M.wood(28, 30, 2), 0, 0.8, 0, 8));
   const face = mapMat(signTex(signText, '#f2c14e', '#161616', 256, 160));
   const board = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.55, 0.04), [M.wood(28, 30, 2), M.wood(28, 30, 2), M.wood(28, 30, 2), M.wood(28, 30, 2), M.wood(28, 30, 2), face]);
@@ -110,7 +110,7 @@ export function kicker(sEnd: number, u: number, len: number, height: number, sig
   board.rotation.y = Math.PI; // face uphill, towards the player
   sg.add(board);
   add(sg);
-  staticBox(sEnd - len - 1.5, u + (u >= 0 ? -1.6 : 1.6), H(sEnd - len - 1.5, u) + 0.8, 0.05, 0.8, 0.05);
+  staticBox(sEnd - len - 1.5, signU, H(sEnd - len - 1.5, signU) + 0.8, 0.05, 0.8, 0.05);
 }
 
 // =====================================================================

@@ -6,14 +6,15 @@ import { M, color, mapMat } from '../art/Materials';
 import { clockTex, signTex, checkerTex, rng } from '../art/Textures';
 import { hiVis } from '../art/Accessories';
 import { carModel, diggerModel, tramModel } from '../art/Motors';
-import { ball, cyl as mcyl, lathe, loft, model, Parts, pipe, q as mq, rbox } from '../art/Model';
+import { ball, cyl as mcyl, extrude as mExtrude, lathe, loft, model, Parts, pipe, q as mq, rbox } from '../art/Model';
 import * as Road from '../world/Road';
+import { QUALITY } from '../core/Platform';
 import {
   MARKS, JOIN_S, HALF_ROAD, HALF_STREET, baseH, theta, toWorld, toWorldAbs, toRoad, roadGroup, right, forward, edgeL, edgeR, H,
 } from '../world/Road';
 import { backLand, buildStreet, guideWalls, sideStreet, tenement, staticBox, Reserved, StreetStyle } from './Buildings';
 import * as SP from './SetPieces';
-import { bx, cyl, cone, once, crenellate, stall, staticRamp } from './SetPieces';
+import { bx, cyl, cone, once, crenellate, stall, staticRamp, kicker } from './SetPieces';
 import { barrier, bench, bollard, communalBin, lampPost, aBoard, cone as coneProp, scaffold, yawQ } from '../props/Props';
 import type { Part } from '../destruction/Destruction';
 import { TOUR as RM_TOUR, TourInfo, Level, tourStops } from './RoyalMile';
@@ -687,24 +688,17 @@ function walnutWhip() {
 }
 
 // =====================================================================
-// 9. Leith Walk: the tram works
+// 9. Leith Walk: match day
 // =====================================================================
-function digger(s: number, u: number) {
-  const v = diggerModel();
-  G.destruction.add(toWorld(s, u, 1.1), theta(s) - Math.PI / 2, [1.6, 1.1, 1.1], {
-    visual: v, dynamic: true, density: 180, points: 1500, label: 'Digger', sound: 'metal', restitution: 0.2,
-  });
-}
-
-/** Which tram-works closure is left out to make room for the derby squabble. */
-const DERBY_GAP = 3;
+/** Where the derby squabble fills the road (the big jump lands you in it). */
+const DERBY_AT = 130;
 
 /**
  * Match day on Leith Walk: Hearts fans squaring up to Hibs fans across the whole street. Knock
  * them over; the side with more fans still standing at full time wins.
  */
 function derby() {
-  const s0 = MARKS.leithwalk + 22 + DERBY_GAP * 44 - 6;
+  const s0 = MARKS.leithwalk + DERBY_AT;
   if (!on(s0 + 30)) return;
   const el = document.getElementById('derby')!;
   el.style.display = 'none';
@@ -712,9 +706,9 @@ function derby() {
   const teams = { hearts: [] as { scored: boolean }[], hibs: [] as { scored: boolean }[] };
   const r = rng(1874);
   const squad = (team: 'hearts' | 'hibs', sA: number, facing: number) => {
-    for (let row = 0; row < 3; row++) {
+    for (let row = 0; row < 4; row++) {
       for (let k = 0; k < 4; k++) {
-        const s = sA + row * 1.9 + (r() - 0.5) * 0.7;
+        const s = sA + row * 1.8 + (r() - 0.5) * 0.7;
         const u = -6.9 + k * 4.6 + (r() - 0.5) * 1.4;
         const t = G.crowd.tourist(s, u, team, 0, team === 'hearts' ? 'Hearts Fan' : 'Hibs Fan', 150);
         const f = forward(s).multiplyScalar(facing);
@@ -724,7 +718,7 @@ function derby() {
     }
   };
   squad('hearts', s0, 1); // uphill, facing down the Walk
-  squad('hibs', s0 + 9.5, -1); // downhill, facing back up
+  squad('hibs', s0 + 11, -1); // downhill, facing back up
   const n = teams.hearts.length;
   // a flag for each end
   for (const [team, s, u, bg, fg, txt] of [
@@ -782,46 +776,131 @@ function derby() {
   });
 }
 
-function leithWalkWorks() {
-  const sA = MARKS.leithwalk + 22, sB = MARKS.foot - 20;
-  if (!on(sA)) return;
-  trigger(sA - 15, () => G.commentary.say('tramworks', true));
-  const orange = color(0xff6a13, 0.6);
-  let i = 0;
-  for (let s = sA; s < sB && on(s); s += 44, i++) {
-    if (i === DERBY_GAP) continue; // the fans have taken over this bit of road
-    const side = i % 2 ? 1 : -1;
-    const len = 24;
-    // taper of cones into the closure
-    for (let k = 0; k < 6; k++) coneProp(s - 8 + k * 1.4, side * (4.4 - k * 0.7));
-    // orange mesh fence along the closure
-    for (let d = 0; d < len; d += 2.4) {
-      const ss = s + d;
-      const fv = new THREE.Group();
-      fv.add(bx(0.05, 1.0, 2.2, orange, 0, 0, 0));
-      fv.add(bx(0.4, 0.15, 0.4, M.black(), 0, -0.55, -1.0));
-      fv.add(bx(0.4, 0.15, 0.4, M.black(), 0, -0.55, 1.0));
-      G.destruction.add(toWorld(ss + 1.2, side * 0.5, 0.62), theta(ss), [0.05, 0.55, 1.1], {
-        visual: fv, dynamic: true, density: 160, points: 30, label: 'Road Works Fence', sound: 'soft',
-      });
+let ballMat: THREE.Material | null = null;
+/** A football's patches: black pentagons on white, wrapped round a sphere. */
+function footballMat() {
+  if (ballMat) return ballMat;
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 128;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#f4f4f0';
+  g.fillRect(0, 0, 256, 128);
+  g.fillStyle = '#151515';
+  const pent = (x: number, y: number, r: number) => {
+    g.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+      g.lineTo(x + Math.cos(a) * r * 1.6, y + Math.sin(a) * r); // stretched sideways to sit right on the sphere
     }
-    // inside: a digger or a skip of rubble, a worker, and a ROAD WORKS sign
-    if (i % 2 === 0) digger(s + len / 2, side * 2.8);
-    else {
-      const skip = new THREE.Group();
-      skip.add(bx(1.8, 1.0, 3.2, color(0xf2b01e, 0.6), 0, 0, 0));
-      G.destruction.add(toWorld(s + len / 2, side * 2.8, 0.55), theta(s), [0.9, 0.5, 1.6], { visual: skip, dynamic: true, density: 260, points: 600, label: 'Skip', sound: 'metal' });
-      for (let k = 0; k < 6; k++) G.destruction.add(toWorld(s + len / 2 - 1 + k * 0.4, side * 2.8, 1.3 + (k % 2) * 0.25), Math.random() * 3, [0.18, 0.1, 0.12], { mat: M.stone(30, 40, k), dynamic: true, density: 1200, points: 15, label: 'Rubble', sound: 'stone' });
-    }
-    const wk = G.crowd.tourist(s + len - 4, side * 2.2, 'tourist', 0, 'Workie', 300);
-    dressUp(wk, 0xff7a1a, 0xf2f2ee);
-    const sg = new THREE.Group();
-    const face = mapMat(signTex(['TRAM WORKS', 'BACK BY POPULAR DEMAND'], '#c4161c', '#fff', 256, 160));
-    sg.add(bx(1.2, 0.8, 0.04, [M.black(), M.black(), M.black(), M.black(), M.black(), face] as any, 0, 0.4, 0));
-    sg.add(bx(0.05, 1.0, 0.05, M.steel(), 0, -0.5, 0));
-    G.destruction.add(toWorld(s - 10, side * 3.4, 1.0), theta(s), [0.6, 1.0, 0.1], { visual: sg, dynamic: true, density: 60, points: 100, label: 'Road Works Sign', sound: 'metal' });
+    g.fill();
+  };
+  for (let i = 0; i < 5; i++) {
+    pent(25 + i * 51.2, 32, 12);
+    pent(51 + i * 51.2, 96, 12);
   }
-  // rails being laid down the middle
+  pent(128, 5, 6);
+  pent(128, 123, 6);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  ballMat = new THREE.MeshStandardMaterial({ map: t, roughness: 0.45 });
+  return ballMat;
+}
+
+/** A football (or, scale 9, a fan zone's giant inflatable one): light and bouncy, it flies. */
+function football(s: number, u: number, big = false) {
+  const r = big ? 1.0 : 0.16;
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, big ? 24 : 12, big ? 16 : 8), footballMat());
+  const g = new THREE.Group();
+  g.add(m);
+  return G.destruction.add(toWorld(s, u, r + 0.02), Math.random() * 6, [r, r, r], {
+    shape: 'ball', visual: g, dynamic: true, density: big ? 3 : 60, restitution: big ? 0.85 : 0.75, friction: 0.5,
+    points: big ? 300 : 25, label: big ? 'Giant Inflatable Ball' : 'Football', sound: 'soft', hitLoad: big ? 6 : 15,
+  });
+}
+
+/** Bunting across the street, lamp post to lamp post, in both sets of colours. */
+function bunting(s: number) {
+  const L = -edgeL(s) + 0.6, R = edgeR(s) - 0.6;
+  const p = new Parts();
+  const y0 = 5.6, sag = 0.9, n = 22;
+  const at = (k: number): [number, number, number] => {
+    const u = L + (R - L) * k;
+    const y = y0 - sag * 4 * k * (1 - k);
+    return [-u, y, 0];
+  };
+  p.add(pipe(Array.from({ length: 9 }, (_, i) => at(i / 8)), 0.012, { seg: 4, curve: true }), color(0x222222, 0.6));
+  const cols = [0x7a1f3d, 0xf2f2ee, 0x0b6b3a, 0xf2f2ee];
+  for (let i = 1; i < n; i++) {
+    const [x, y] = at(i / n);
+    p.add(mExtrude([[-0.16, 0], [0.16, 0], [0, -0.38]], 0.01), new THREE.MeshStandardMaterial({ color: cols[i % 4], roughness: 0.8, side: THREE.DoubleSide }), [x, y, 0], [0, Math.PI / 2, 0]);
+  }
+  const g = roadGroup(s, 0, 0);
+  g.position.y = baseH(s);
+  p.build(g);
+  add(g);
+}
+
+/**
+ * Leith Walk on derby day. Fans line both pavements on the way to the game, stewards have coned
+ * off half the road (cones fly; nothing here is a wall), a sack of footballs has burst across the
+ * street and the fan zone's giant inflatables are loose. A ramp launches you over the last of the
+ * cones into the middle of the squabble; beyond it the police are in, and the pie stalls.
+ */
+function matchDay() {
+  const w0 = MARKS.leithwalk, sD = w0 + DERBY_AT, sEnd = MARKS.foot - 20;
+  if (!on(w0 + 10)) return;
+  trigger(w0 - 10, () => G.commentary.say('matchday', true));
+  const r = rng(1875);
+  for (let s = w0 + 8; s < sEnd && on(s); s += 26) bunting(s);
+
+  // fans walking down to the game, Hearts on the left pavement and Hibs on the right
+  const lining = (sA: number, sB: number, gap: number) => {
+    for (let s = sA; s < sB && on(s); s += gap / Math.max(0.5, QUALITY.crowd)) {
+      for (const side of [-1, 1] as const) {
+        if (r() < 0.25) continue;
+        const team = side < 0 ? 'hearts' : 'hibs';
+        const u = side * ((side < 0 ? edgeL(s) : edgeR(s)) - 1.3 - r() * 1.2);
+        G.crowd.tourist(s + (r() - 0.5) * 2, u, team, 0, team === 'hearts' ? 'Hearts Fan' : 'Hibs Fan', 150);
+      }
+    }
+  };
+  lining(w0 + 14, sD - 22, 6);
+  lining(sD + 26, sEnd - 6, 8);
+
+  // stewards' cone chicanes, alternating sides: they scatter, they don't stop you
+  const taper = (s: number, side: number, n = 8) => {
+    for (let k = 0; k < n; k++) coneProp(s + k * 1.3, side * (6.2 - k * 0.75));
+  };
+  taper(w0 + 26, -1);
+  taper(w0 + 48, 1);
+  taper(w0 + 70, -1);
+  for (const [s, side] of [[w0 + 33, -1], [w0 + 55, 1], [w0 + 77, -1]] as const) {
+    const st = G.crowd.tourist(s, side * 4.2, 'tourist', 0, 'Steward', 300);
+    dressUp(st, 0xd8ff2a, 0x161616);
+  }
+  // a sack of footballs, burst across the road, and the fan zone's giant inflatables
+  for (let k = 0; k < 10; k++) football(w0 + 60 + r() * 14, (r() - 0.5) * 9);
+  football(w0 + 92, -3.2, true);
+  football(w0 + 97, 3.4, true);
+
+  // the big jump: a ramp of crates and planks over the last cones and into the derby
+  const lip = sD - 14;
+  for (let k = 0; k < 7; k++) coneProp(lip - 13 + k * 0.6, -2.6 + (k % 2) * 0.4);
+  for (let k = 0; k < 7; k++) coneProp(lip - 13 + k * 0.6, 2.6 - (k % 2) * 0.4);
+  kicker(lip, 0, 6.5, 1.75, ['JUMP', 'THE', 'DERBY'], 1.9);
+  for (let k = 0; k < 9; k++) coneProp(lip + 2 + k * 0.9, (k % 3 - 1) * 1.1);
+
+  // after the final whistle: the polis, the pie stalls, a slalom of cones to the Foot of the Walk
+  policeCar(sD + 32, -(edgeL(sD + 32) - 1.6), 0.1);
+  stall(sD + 60, -(edgeL(sD + 60) - 2.4), 'scarf', 'HALF & HALF SCARVES £10', ['#7a1f3d', '#0b6b3a']);
+  stall(sD + 72, edgeR(sD + 72) - 2.4, 'haggis', 'PIES & BOVRIL', ['#c4161c', '#f4ecd8']);
+  for (let s = sD + 40, k = 0; s < sEnd - 20 && on(s); s += 3.6, k++) coneProp(s, (k % 2 ? 1 : -1) * 1.6);
+  for (let k = 0; k < 6; k++) football(sD + 90 + r() * 10, (r() - 0.5) * 8);
+  // and one for the highlights reel, just before the statue
+  kicker(sEnd - 14, 3.2, 3.2, 0.7, ['HIGHLIGHTS', 'REEL'], 0.95);
+
+  // the new tram line down the middle, nearly finished (honest)
   const rail = color(0x6b6b6b, 0.3, 0.8);
   for (let s = MARKS.leithwalk + 4; s < Math.min(MARKS.foot - 4, LIMIT); s += 6) {
     const g = roadGroup(s + 3, 0, 0);
@@ -1048,7 +1127,7 @@ const TOUR_LONG: TourInfo[] = [
   { name: 'The Scott Monument', pts: 'SIGHTSEEING ONLY', blurb: 'A 61-metre gothic rocket. You cannot reach it. Please stop trying.', s: 0, cam: [0, 3, 4], look: [0, 28, 24] },
   { name: 'The Balmoral Clock', pts: 'ALWAYS 3 MINUTES FAST', blurb: 'The East End, and the corner of the Balmoral. Leith Walk lies beyond.', s: 0, cam: [0, -1, 4], look: [0, 16, 22] },
   { name: 'The Walnut Whip', pts: 'LOCAL LANDMARK (DISPUTED)', blurb: 'Down Leith Street past the bronze ribbon hotel. Nobody calls it anything else.', s: 0, cam: [0, -4, 7], look: [0, 18, 28] },
-  { name: 'Leith Walk Tram Works', pts: 'DIGGER 1,500 · SKIP 600 · CONES', blurb: 'A mile of roadworks. Slalom the closures or plough straight through. The council will never notice.', s: 0, cam: [0, 0, 5], look: [0, 0, 0] },
+  { name: 'Leith Walk: Derby Day', pts: 'JUMP THE DERBY · FANS 150 · GIANT BALLS 300', blurb: 'Hearts and Hibs fans down both pavements, cones everywhere, and a ramp that drops you right into the squabble.', s: 0, cam: [0, 0, 5], look: [0, 0, 0] },
   { name: 'Queen Victoria', pts: '2,500 · WE ARE NOT AMUSED 2,000', blurb: 'Her Majesty at the Foot of the Walk. Clip her plinth.', s: 0, cam: [0, -1, 3], look: [0, 6.4, 3] },
   { name: 'Newhaven Lighthouse', pts: 'SEAGULLS', blurb: 'The harbour. The sea is right there. Do not look at the sea. Look at the road.', s: 0, cam: [0, -2, 4], look: [0, 21, 8] },
   { name: 'Starbank Slipway', pts: 'SPLASHDOWN 5,000', blurb: 'The end of the road. Hit the slipway and take the plunge into the Firth of Forth.', s: 0, cam: [0, -2, 4], look: [0, 3, 0] },
@@ -1190,10 +1269,10 @@ export function buildDiversion(tier: number): Level {
     busker(m.leithwalk + 250, 1, 'piper');
     busker(m.junctionst + 10, 1, 'mime');
     walnutWhip();
-    leithWalkWorks();
+    matchDay();
     derby();
     // the polis are at the derby too
-    policeCar(m.leithwalk + 22 + 3 * 44 - 18, edgeR(m.leithwalk + 150) - 1.6);
+    policeCar(m.leithwalk + DERBY_AT - 30, edgeR(m.leithwalk + DERBY_AT - 30) - 1.6);
     policeBox(m.leithwalk + 22 + 3 * 44 + 26, -(edgeL(m.leithwalk + 180) - 1.2));
     arcadeCabinet(m.leithwalk + 66, -(edgeL(m.leithwalk + 66) - 0.8));
     marchers(m.junctionst + 30, 7);

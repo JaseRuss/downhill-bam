@@ -76,7 +76,7 @@ const LINES: Record<string, string[]> = {
   scott: ["There's the Scott Monument. Looks like a gothic rocket. Probably is."],
   balmoral: ["The Balmoral clock's always three minutes fast. So's he."],
   walnut: ["There's the Walnut Whip. Locals hate it. Tourists photograph it. Nobody eats it."],
-  tramworks: ["Tram works! They were meant tae be finished in 2014!", "Cones! Cones as far as the eye can see!"],
+  matchday: ["It's derby day on Leith Walk! Fans on both pavements and the stewards have coned off the lot!", "Match day! Maroon on the left, green on the right, and a trolley coming straight down the middle!"],
   victoria: ["QUEEN VICTORIA IS NOT AMUSED!", "Her Majesty has been toppled! We are definitely not amused!"],
   lighthouse: ["Newhaven Lighthouse! The sea's next! Somebody stop him!"],
   splash: ["SPLASHDOWN! Into the Forth he goes!", "He's in the sea! And so is the vehicle! And the dignity!", "That's the Firth of Forth! It's freezing! Nobody tell his mother!"],
