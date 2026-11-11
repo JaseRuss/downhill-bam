@@ -24,7 +24,9 @@ const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 
 const UP = new THREE.Vector3(0, 1, 0);
 
 export class CameraRig {
-  mode: 'tour' | 'aim' | 'chase' | 'orbit' | 'frame' | 'manual' = 'aim';
+  mode: 'tour' | 'aim' | 'chase' | 'orbit' | 'frame' | 'manual' | 'cockpit' = 'aim';
+  /** Which way is up in the cab (it tilts with the lorry). */
+  private cabUp = new THREE.Vector3(0, 1, 0);
   pos = new THREE.Vector3();
   look = new THREE.Vector3();
   private dir = new THREE.Vector3(0, 0, 1);
@@ -72,6 +74,22 @@ export class CameraRig {
     this.dir.copy(fwd).setY(0).normalize();
     this.pos.copy(target).addScaledVector(this.dir, -6.5).add(new THREE.Vector3(0, 3, 0));
     this.look.copy(target).addScaledVector(this.dir, 5);
+  }
+
+  /** First person: sit at `eye`, look along the vehicle, lean with it (only partly, for comfort). */
+  cockpit(eye: THREE.Vector3, fwd: THREE.Vector3, up: THREE.Vector3, dt: number) {
+    if (this.mode !== 'cockpit') this.cabUp.copy(UP);
+    this.mode = 'cockpit';
+    this.pos.copy(eye);
+    this.look.copy(eye).addScaledVector(fwd, 20).addScaledVector(up, -1.6);
+    const want = up.clone().multiplyScalar(0.6).addScaledVector(UP, 0.4).normalize();
+    this.cabUp.lerp(want, 1 - Math.exp(-dt * 6)).normalize();
+  }
+
+  /** Back out to the chase camera from wherever the camera is now. */
+  chaseFrom(fwd: THREE.Vector3) {
+    this.dir.copy(fwd).setY(0).normalize();
+    this.mode = 'chase';
   }
 
   /** The camera placement for the aiming view (behind the vehicle). */
@@ -166,6 +184,8 @@ export class CameraRig {
       this.pos.lerp(want, 1 - Math.exp(-dt * 2));
       this.look.lerp(target, 1 - Math.exp(-dt * 4));
     }
+    else if (this.mode === 'cockpit') fov += 4 + Math.min(CAM.fovSpeed, vel.length() * 0.7);
+    cam.up.copy(this.mode === 'cockpit' ? this.cabUp : UP);
     // 'manual': whoever set pos/look is in charge
     // never dip under the Firth of Forth
     if (Road.SEA_Y > -500) this.pos.y = Math.max(this.pos.y, Road.SEA_Y + 1.5);

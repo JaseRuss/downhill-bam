@@ -32,6 +32,8 @@ export interface VehicleSpec {
   /** Multiplier on how hard a hit must be to throw Hamish out. */
   grip: number;
   stats: { speed: number; weight: number; engine: number };
+  /** Has a cab to ride in: offers the first-person view. */
+  cockpit?: boolean;
   build(g: THREE.Group): VehicleParts;
 }
 
@@ -486,7 +488,7 @@ const GRIT_WHEELS: [number, number][] = [[1.15, 0.86], [1.15, -0.86], [-1.05, 0.
 const gritter: VehicleSpec = {
   id: 'gritter',
   name: 'Sir Saltalot, the Council Gritter',
-  blurb: 'Seven tonnes of council lorry with a snowplough on the front and a hopper of rock salt on the back. The roof came off under the Cowgate bridge. Nothing stops it.',
+  blurb: 'Seven tonnes of council lorry with a snowplough on the front and a hopper of rock salt on the back. The roof came off under the Cowgate bridge. Nothing stops it. Ride it from the cab, or swap to the chase camera (C, or CAM on a phone).',
   engine: { accel: 7, top: 23, sound: 0.55, start: 'gritter' },
   body: [1.9, 0.48, 0.98, 0.78, 230],
   deck: [1.7, 0.08, 0.92, 0.26, 1300],
@@ -503,6 +505,7 @@ const gritter: VehicleSpec = {
   hop: 1.15,
   grip: 3.6,
   stats: { speed: 5, weight: 5, engine: 5 },
+  cockpit: true,
   build(g) {
     const p = new Parts();
     const orange = color(0xf07a12, 0.3, 0.2), yellow = color(0xf2c81e, 0.4, 0.2), dark = color(0x1a1b1e, 0.7), steel = color(0x3a3d42, 0.45, 0.7);

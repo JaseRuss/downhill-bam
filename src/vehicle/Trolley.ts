@@ -212,6 +212,13 @@ export class Trolley implements Entity {
     return new THREE.Vector3(1, 0, 0).applyQuaternion(new THREE.Quaternion(r.x, r.y, r.z, r.w));
   }
 
+  /** Where Hamish's eyes are, and which way the cab faces: for the first-person view. */
+  cabView(eye: THREE.Vector3) {
+    const head = this.rider.rig.head;
+    head.updateWorldMatrix(true, false);
+    return head.getWorldPosition(eye).addScaledVector(this.forwardDir, 0.1).addScaledVector(this.upDir, 0.02);
+  }
+
   get upDir() {
     const r = this.body.rotation();
     return new THREE.Vector3(0, 1, 0).applyQuaternion(new THREE.Quaternion(r.x, r.y, r.z, r.w));

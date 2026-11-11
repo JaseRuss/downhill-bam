@@ -102,7 +102,7 @@ export function bake(scene: THREE.Scene, chunk = 90) {
       }
     });
   }
-  let n = 0;
+  const out: THREE.Mesh[] = [];
   for (const { mat, geos } of buckets.values()) {
     const merged = mergeGeometries(geos, false);
     geos.forEach((g) => g.dispose());
@@ -114,8 +114,8 @@ export function bake(scene: THREE.Scene, chunk = 90) {
     m.receiveShadow = true;
     m.userData.batch = true;
     scene.add(m);
-    n++;
+    out.push(m);
   }
   statics.length = 0;
-  return n;
+  return out;
 }

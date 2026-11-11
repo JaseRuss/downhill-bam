@@ -37,7 +37,15 @@ export class MobileUI {
     this.steerBtns.append(left, right);
     const hop = el('div', 'hopBtn', 'tbtn');
     hop.textContent = 'HOP';
-    this.touch.append(this.steerBtns, hop);
+    // the gritter's cab/chase camera swap (only shown in a vehicle with a cab)
+    const cam = el('div', 'camBtn', 'tbtn');
+    cam.textContent = 'CAM';
+    cam.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      input.tap('KeyC');
+    });
+    this.touch.append(this.steerBtns, hop, cam);
     document.body.appendChild(this.touch);
     holdButton(left, (on) => input.hold('KeyA', on));
     holdButton(right, (on) => input.hold('KeyD', on));

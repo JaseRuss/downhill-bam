@@ -25,7 +25,7 @@ import { makeEnv } from '../art/Materials';
 import { policeTally, resetWanted } from '../props/Homages';
 import { addRun, Cosmetic, COSMETICS, RunTally, SLOTS } from './Cosmetics';
 import { MobileUI } from '../ui/MobileUI';
-import { QUALITY, CAM } from '../core/Platform';
+import { QUALITY, CAM, PLATFORM } from '../core/Platform';
 import { FINISH_S, START_S, toWorld, theta, edgeL, edgeR, baseH } from '../world/Road';
 import * as Road from '../world/Road';
 
@@ -68,6 +68,14 @@ export class Game {
   vehicle: VehicleId = 'trolley';
   /** A vehicle unlocked by the run just finished, offered on the results screen. */
   private swapTo: VehicleId | null = null;
+  /** First person from the cab, for vehicles that have one. On unless the player turned it off. */
+  private cabView = (() => {
+    try {
+      return localStorage.getItem('downhillbam.cabview') !== '0';
+    } catch {
+      return true;
+    }
+  })();
   tier = 1;
   state: State = 'title';
   /** The live objective tracker: how far each one had got when last looked at. */
@@ -216,7 +224,8 @@ export class Game {
     G.trolley = new Trolley(scene, START_S, 0, this.vehicle);
     this.level = this.tier >= 2 ? buildDiversion(this.tier) : buildRoyalMile();
     this.backdrop = new Backdrop(scene, new THREE.Vector3(-22, 48, -26), this.level.keepOut);
-    bake(scene);
+    // baked scenery chunks that fade into the haar (the far silhouettes ignore fog and stay)
+    this.fogged = bake(scene).filter((m) => (m.material as THREE.Material & { fog?: boolean }).fog !== false);
     this.boot = new Boot(scene, START_S, this.spec);
     this.boot.setAngle(BOOT_REST);
     this.hud.setMarks(this.level.tour.slice(1).filter((t) => t.s < FINISH_S + 5), START_S, FINISH_S);
@@ -713,9 +722,21 @@ export class Game {
     this.rig.look.lerp(look, 1 - Math.exp(-dt * 1.6));
   }
 
-  /** Hide props, tourists and pigeons lost in the haar. */
+  /** Static scenery chunks that the haar swallows at a distance. */
+  private fogged: THREE.Mesh[] = [];
+
+  /** Hide props, tourists and pigeons lost in the haar, and scenery chunks too deep in it to see. */
   private cull() {
     const c = this.camera.position;
+    const fog = this.scene.fog as THREE.FogExp2 | null;
+    if (fog) {
+      // past this the haar lets through less than 0.5% of anything: not worth drawing
+      const cut = 2.3 / fog.density;
+      for (const m of this.fogged) {
+        const bs = m.geometry.boundingSphere!;
+        m.visible = bs.center.distanceTo(c) - bs.radius < cut;
+      }
+    }
     const R2 = QUALITY.cullDistance * QUALITY.cullDistance;
     const vis = (o: THREE.Object3D) => {
       const dx = o.position.x - c.x, dz = o.position.z - c.z;
@@ -860,6 +881,12 @@ export class Game {
       case 'results':
         break;
     }
+    if (this.spec.cockpit && input.pressed('KeyC') && (this.state === 'run' || this.state === 'aim')) {
+      this.cabView = !this.cabView;
+      try {
+        localStorage.setItem('downhillbam.cabview', this.cabView ? '1' : '0');
+      } catch {}
+    }
     if (input.pressed('KeyR') && (this.state === 'run' || this.state === 'ending' || this.state === 'results' || this.state === 'aim')) this.restart(true);
 
     // physics
@@ -893,11 +920,20 @@ export class Game {
       const e = this.spec.engine;
       let eng = e ? (t.splashed ? 'ENGINE: FLOODED' : t.engineOn ? (t.ejected ? 'ENGINE: CUT OUT' : 'ENGINE: ON') : 'ENGINE: STARTS AT THE GRASSMARKET') : '';
       if (t.boostT > 0 && !t.ejected) eng = `SKOOSH BOOST ${t.boostT.toFixed(1)}s` + (eng ? ' · ' + eng : '');
+      if (this.spec.cockpit && !PLATFORM.mobile) eng += (eng ? ' · ' : '') + (this.cabView ? 'C: CHASE CAM' : 'C: CAB VIEW');
       this.hud.setRun(t.speed, t.hops, t.hopCharge, t.ejected, t.roadS, START_S, FINISH_S, !!t.runner, eng);
       this.sfx.rolling(t.splashed ? 0 : t.speed, t.grounded);
       this.sfx.engineHum(this.state === 'run' && t.engineOn && !t.ejected && !t.splashed, t.speed, e?.sound ?? 1);
     } else this.sfx.rolling(0, false);
 
+    // the cab view takes over from the chase camera once it's settled in behind, and hands back if
+    // Hamish leaves the cab or the lorry leaves the road
+    const inCab = !!this.spec.cockpit && this.cabView && this.state === 'run' && !t.ejected && !t.splashed && (this.rig.mode === 'chase' || this.rig.mode === 'cockpit');
+    if (inCab) this.rig.cockpit(t.cabView(new THREE.Vector3()), t.forwardDir, t.upDir, dt);
+    else if (this.rig.mode === 'cockpit') this.rig.chaseFrom(t.forwardDir);
+    // don't look out through the back of his own head
+    if (t.rider) t.rider.group.visible = this.rig.mode !== 'cockpit';
+    document.body.classList.toggle('cab', !!this.spec.cockpit && this.state === 'run');
     if (this.splashAt && (this.state === 'run' || this.state === 'ending')) this.rig.update(dt, this.splashAt, new THREE.Vector3(), t.forwardDir);
     else this.rig.update(dt, tp, tv, t.forwardDir);
     if (this.state === 'aim' && this.sideView) {

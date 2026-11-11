@@ -139,6 +139,8 @@
     #touch .tbtn { position: absolute; pointer-events: auto; user-select: none; -webkit-user-select: none; touch-action: none; display: flex; align-items: center; justify-content: center; font-family: 'Bangers', cursive; color: #fff; background: rgba(20,18,16,.45); border: 3px solid rgba(255,255,255,.8); border-radius: 50%; text-shadow: 0 2px 0 #000; }
     #touch .tbtn.down { background: rgba(242,193,78,.7); }
     #hopBtn { right: calc(22px + env(safe-area-inset-right)); bottom: 26px; width: 112px; height: 112px; font-size: 32px; }
+    #camBtn { right: calc(150px + env(safe-area-inset-right)); bottom: 40px; width: 72px; height: 72px; font-size: 22px; display: none !important; }
+    body.cab #camBtn { display: flex !important; }
     #steerBtns { position: absolute; left: calc(18px + env(safe-area-inset-left)); bottom: 26px; display: flex; gap: 14px; }
     #steerBtns .tbtn { position: static; width: 88px; height: 88px; font-size: 34px; }
     #rotate { position: fixed; inset: 0; z-index: 20; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #1d1a17; color: #fff; font-size: 22px; text-align: center; padding: 24px; }
