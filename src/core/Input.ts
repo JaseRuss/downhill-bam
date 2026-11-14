@@ -12,15 +12,24 @@ export type TiltState = 'off' | 'needs-permission' | 'on' | 'unavailable';
  * Steering by tilting the phone like a steering wheel (in landscape). Works out where "up" is from
  * the deviceorientation angles (the same on every browser, unlike the raw accelerometer, whose
  * signs differ between iOS and Android) and measures the roll relative to a calibrated centre.
+ *
+ * Cheaper phones and tablets with only an accelerometer (no gyroscope) never send deviceorientation
+ * readings. For those, "up" comes from the gravity in devicemotion's accelerationIncludingGravity
+ * instead, smoothed to take out bumps. Orientation readings always win when there are any.
  */
 export class Tilt {
   state: TiltState = 'off';
   /** Current roll in radians (+ = turned right), smoothed. */
   roll = 0;
+  /** Where the readings come from: the orientation sensor, or the accelerometer fallback. */
+  source: 'orientation' | 'motion' | null = null;
   private raw = 0;
   private neutral = 0;
   private seen = false;
   private listening = false;
+  private gx = 0;
+  private gy = 0;
+  private gz = 0;
   sensitivity = 1;
 
   constructor() {
@@ -61,16 +70,45 @@ export class Tilt {
     if (this.listening) return;
     this.listening = true;
     window.addEventListener('deviceorientation', (e) => this.onOrientation(e));
+    window.addEventListener('devicemotion', (e) => this.onMotion(e));
   }
 
   /** Feed a reading (also used by tests). */
   onOrientation(e: { beta: number | null; gamma: number | null }) {
     if (e.beta === null || e.gamma === null) return;
     this.seen = true;
+    this.source = 'orientation';
     if (this.state !== 'on') this.state = 'on';
     const b = e.beta * DEG, g = e.gamma * DEG;
     // world "up" in the device's own axes (x = right edge, y = top edge, z = out of the screen)
-    const ux = -Math.cos(b) * Math.sin(g), uy = Math.sin(b);
+    this.setUp(-Math.cos(b) * Math.sin(g), Math.sin(b));
+  }
+
+  /** Accelerometer fallback, used only while no orientation readings have arrived. */
+  onMotion(e: { accelerationIncludingGravity: { x: number | null; y: number | null; z: number | null } | null }) {
+    if (this.source === 'orientation') return;
+    const a = e.accelerationIncludingGravity;
+    if (!a || a.x === null || a.y === null || a.z === null) return;
+    // At rest this points straight up (per the spec, which Android follows); iOS reports it the
+    // other way round. iOS devices all have gyroscopes, so this is only a safety net there.
+    const k = IOS ? -1 : 1;
+    let x = a.x * k, y = a.y * k, z = a.z * k;
+    const n = Math.hypot(x, y, z);
+    if (n < 4 || n > 16) return; // mid-bump or freefall: not a usable gravity reading
+    x /= n; y /= n; z /= n;
+    // low-pass filter so a jolt doesn't yank the steering (events arrive ~60 times a second)
+    const f = this.source === 'motion' ? 0.2 : 1;
+    this.gx += (x - this.gx) * f;
+    this.gy += (y - this.gy) * f;
+    this.gz += (z - this.gz) * f;
+    this.seen = true;
+    this.source = 'motion';
+    if (this.state !== 'on') this.state = 'on';
+    this.setUp(this.gx, this.gy);
+  }
+
+  /** Turn world "up" (in the device's x/y axes) into the roll angle on screen. */
+  private setUp(ux: number, uy: number) {
     // in landscape the screen's up is along the device's x axis: which way depends on how it's held
     const ang = screenAngle();
     let s = ang === 90 ? 1 : ang === 270 || ang === -90 ? -1 : Math.sign(ux) || 1;
@@ -111,6 +149,10 @@ export class Tilt {
     } catch {}
   }
 }
+
+const IOS =
+  typeof navigator !== 'undefined' &&
+  (/iPad|iPhone|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1));
 
 function screenAngle() {
   const o = (screen as any).orientation;
