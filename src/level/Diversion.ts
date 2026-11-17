@@ -12,7 +12,7 @@ import { QUALITY } from '../core/Platform';
 import {
   MARKS, JOIN_S, HALF_ROAD, HALF_STREET, baseH, theta, toWorld, toWorldAbs, toRoad, roadGroup, right, forward, edgeL, edgeR, H,
 } from '../world/Road';
-import { backLand, buildStreet, guideWalls, sideStreet, tenement, staticBox, Reserved, StreetStyle } from './Buildings';
+import { backLand, buildStreet, guideWalls, sideStreet, tenement, staticBox, Reserved, SideStreetOpts, StreetStyle } from './Buildings';
 import * as SP from './SetPieces';
 import { bx, cyl, cone, once, crenellate, stall, staticRamp, kicker } from './SetPieces';
 import { barrier, bench, bollard, communalBin, lampPost, aBoard, cone as coneProp, scaffold, yawQ } from '../props/Props';
@@ -62,17 +62,20 @@ function dressUp(t: { rig: any }, vest: number, cap: number) {
 // =====================================================================
 
 /** A side street off the route, shut with council barriers. `dir` is the world direction it runs. */
-function blocked(s: number, side: 1 | -1, name: string, dir?: THREE.Vector3, width = 9) {
+function blocked(s: number, side: 1 | -1, name: string, dir?: THREE.Vector3, width = 9, opts?: SideStreetOpts) {
   if (!on(s + 6)) return;
   let angle = 90;
   if (dir) {
-    const out = right(s).multiplyScalar(side);
-    angle = (Math.atan2(dir.dot(out), dir.dot(forward(s))) * 180) / Math.PI;
+    // measured where sideStreet will turn it back into a direction
+    const sm = s + width / 2;
+    const out = right(sm).multiplyScalar(side);
+    angle = (Math.atan2(dir.dot(out), dir.dot(forward(sm))) * 180) / Math.PI;
   }
-  sideStreet(s + width / 2, side, name, angle, width, Math.round(s));
+  // `width` is the mouth along the route; a street carried on from its own centre line keeps its own width
+  sideStreet(s + width / 2, side, name, angle, opts?.origin ? 2 * HALF_STREET : width, Math.round(s), opts);
   // barriers across the mouth, inside the guide rail so they can be skittled
   const e = edge(s + width / 2, side);
-  for (let k = 0; k < 4; k++) barrier(s + 1.4 + k * 2.2, side * (e - 0.5), 0);
+  for (let k = 0; 1.4 + k * 2.2 < width; k++) barrier(s + 1.4 + k * 2.2, side * (e - 0.5), 0);
   const sg = roadGroup(s + width / 2, side * (e - 0.9), 0);
   sg.add(cyl(0.04, 0.04, 1.3, M.steel(), 0, 0.65, 0, 6));
   const face = mapMat(signTex(['ROAD', 'CLOSED'], '#c4161c', '#fff', 128, 128));
@@ -204,9 +207,18 @@ function castleHill() {
 // =====================================================================
 // 1. The diversion at the George IV Bridge junction
 // =====================================================================
+/**
+ * The mouth of the Royal Mile on the left of the bend: from where the bend's building line leaves
+ * the Royal Mile's left-hand building line to where it crosses its right-hand one.
+ */
+const RM_MOUTH = [JOIN_S + 12, JOIN_S + 35];
+
 function diversionJunction() {
-  // the Royal Mile carries straight on, shut
-  blocked(JOIN_S + 18, -1, 'ROYAL MILE', forward(JOIN_S - 5), 14);
+  // the Royal Mile carries straight on, shut: the street itself, on its own centre line and at its
+  // own width, so its left-hand lands pick up right where the bend's lands peel away from them
+  const origin = toWorld(JOIN_S, 0, 0), dir = forward(JOIN_S);
+  const peel = toWorld(RM_MOUTH[0], -edgeL(RM_MOUTH[0]), 0).sub(origin).dot(dir);
+  blocked(RM_MOUTH[0], -1, 'ROYAL MILE', dir, RM_MOUTH[1] - RM_MOUTH[0], { origin, len: 70, start: { 1: peel }, joinU: -Road.U_MIN });
   // yellow diversion signs pointing right
   const yellow = mapMat(signTex(['DIVERSION', '→ → →'], '#f2c14e', '#161616', 256, 160));
   for (const [s, u] of [[96, -5.8], [106, -6.2], [114, -5.6]] as [number, number][]) {
@@ -1251,7 +1263,7 @@ export function buildDiversion(tier: number): Level {
     R(1, 36, 56),
     R(-1, 88, 106),
     // side streets (left)
-    R(-1, JOIN_S + 17, JOIN_S + 33),
+    R(-1, RM_MOUTH[0], RM_MOUTH[1]),
     R(-1, m.grassmarket + 7, m.grassmarket + 17),
     R(-1, m.westport + 5, m.westport + 15),
     R(-1, m.lothian + 10, m.lothian + 20),

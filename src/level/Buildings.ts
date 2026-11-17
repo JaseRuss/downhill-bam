@@ -7,7 +7,7 @@ import { facadeTex, shopTex, signTex, SHOP_NAMES, rng } from '../art/Textures';
 import { shopWindow } from '../art/Interiors';
 import { ball, cyl, lathe, Parts, pipe, q, rbox, V3 } from '../art/Model';
 import { FINE, UNIT, archFrame, dressed, gable, moulding, roof, sbox } from '../art/Architecture';
-import { HALF_STREET, BAYS, BAY_T, baseH, theta, toWorld, toRoad, L, roadGroup, right, edgeL, edgeR, forward } from '../world/Road';
+import { HALF_ROAD, HALF_STREET, BAYS, BAY_T, H, baseH, theta, toWorld, toRoad, L, roadGroup, right, edgeL, edgeR, forward } from '../world/Road';
 
 export interface Reserved {
   side: 1 | -1;
@@ -370,31 +370,55 @@ export function buildStreet(reserved: Reserved[], sFrom: number, sTo: number, st
  * A side street that isn't on the route: a gap in the buildings, a stub of road running off at an
  * angle with buildings either side, and a council barrier line across the mouth (breakable for points).
  */
-export function sideStreet(s: number, side: 1 | -1, name: string, angle = 90, width = 9, seed = 1) {
+export interface SideStreetOpts {
+  /**
+   * Where the stub's centre line starts, instead of the building line at s: a street the route
+   * peels away from (the Royal Mile, straight on at a bend) carries on from its own centre line.
+   */
+  origin?: THREE.Vector3;
+  /** Length of the stub from its start. */
+  len?: number;
+  /**
+   * How far along the stub each row of lands starts (+1 = its left-hand row, looking up it). A row
+   * given here is built whole, so it must start clear of the main street.
+   */
+  start?: { [k: number]: number };
+  /**
+   * Lay the stub's surface from the edge of the main street's own surface (|u| = joinU), at its
+   * height, rather than as a slab tucked under it. Needed where the stub leaves at a shallow angle:
+   * there the slab can't hide under the street, and pokes through it or leaves holes beside it.
+   */
+  joinU?: number;
+}
+
+export function sideStreet(s: number, side: 1 | -1, name: string, angle = 90, width = 9, seed = 1, opts: SideStreetOpts = {}) {
   const e = side > 0 ? edgeR(s) : edgeL(s);
-  const mouth = toWorld(s, side * e, 0);
+  const mouth = opts.origin ? opts.origin.clone() : toWorld(s, side * e, 0);
   const out = right(s).multiplyScalar(side);
   const fwd = forward(s);
   const a = (angle * Math.PI) / 180;
   // direction the side street runs (away from the route)
   const dir = out.clone().multiplyScalar(Math.sin(a)).addScaledVector(fwd, Math.cos(a)).normalize();
-  const len = 34;
-  const y = baseH(s);
+  const len = opts.len ?? 34;
+  let y = baseH(s);
   const yaw = Math.atan2(dir.x, dir.z);
-  const road = new THREE.Mesh(new THREE.BoxGeometry(width, 0.4, len), M.stone(30, 34, 9, width / 4, len / 4));
-  road.position.copy(mouth).addScaledVector(dir, len / 2);
-  // kept below the street surface, so where an angled stub tucks under the main road it can't show
-  road.position.y = y - 0.32;
-  road.rotation.y = yaw;
-  road.receiveShadow = true;
-  addStatic(road);
+  if (opts.joinU !== undefined) y = stubSurface(mouth, dir, width, len, side, opts.joinU);
+  else {
+    const road = new THREE.Mesh(new THREE.BoxGeometry(width, 0.4, len), M.stone(30, 34, 9, width / 4, len / 4));
+    road.position.copy(mouth).addScaledVector(dir, len / 2);
+    // kept below the street surface, so where an angled stub tucks under the main road it can't show
+    road.position.y = y - 0.32;
+    road.rotation.y = yaw;
+    road.receiveShadow = true;
+    addStatic(road);
+  }
   // buildings down both sides of it
   const r = rng(seed * 31 + 7);
   // the first stretch of each side is the main street's own lands, seen end-on: start behind them
   // (overlapping them left two walls in the same plane, flickering)
   const START = 10.6;
   for (const k of [-1, 1]) {
-    let d = START;
+    let d = opts.start?.[k] ?? START;
     while (d < len) {
       const w = Math.min(len - d, 7 + r() * 6);
       const h = 12 + r() * 9;
@@ -410,8 +434,9 @@ export function sideStreet(s: number, side: 1 | -1, name: string, angle = 90, wi
       const lateral = new THREE.Vector3(dir.z, 0, -dir.x).multiplyScalar(k * (width / 2 + 4.5));
       const centre = mouth.clone().addScaledVector(dir, d + w / 2).add(lateral);
       // on a stub that leaves at a shallow angle, the near row would swing back over the main
-      // street: leave out any land whose footprint reaches into it
-      if (intrudes(centre, dir, 4.5, w / 2)) {
+      // street: leave out any land whose footprint reaches into it (unless the caller placed
+      // this row: then its first land sits right on the main street's building line on purpose)
+      if (opts.start?.[k] === undefined && intrudes(centre, dir, 4.5, w / 2)) {
         d += w;
         continue;
       }
@@ -465,11 +490,92 @@ export function sideStreet(s: number, side: 1 | -1, name: string, angle = 90, wi
   }
   // street sign on the corner
   const sg = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.45), new THREE.MeshStandardMaterial({ map: signTex([name], '#f4f1e6', '#111', 384, 72, 'Lilita One, Arial Black') }));
-  sg.position.copy(mouth).addScaledVector(fwd, -width / 2 - 0.3).addScaledVector(out, 0.2);
+  if (opts.origin) {
+    // on the first land of the left-hand row, facing across the stub
+    const lat = new THREE.Vector3(dir.z, 0, -dir.x);
+    sg.position.copy(mouth).addScaledVector(dir, (opts.start?.[1] ?? START) + 2.4).addScaledVector(lat, width / 2 - 0.05);
+    sg.rotation.y = Math.atan2(-lat.x, -lat.z);
+  } else {
+    sg.position.copy(mouth).addScaledVector(fwd, -width / 2 - 0.3).addScaledVector(out, 0.2);
+    sg.rotation.y = Math.atan2(-out.x, -out.z) + Math.PI;
+  }
   sg.position.y = y + 3.2;
-  sg.rotation.y = Math.atan2(-out.x, -out.z) + Math.PI;
   addStatic(sg);
   return { mouth, dir, out, width };
+}
+
+/**
+ * The surface of a stub that leaves the route at a shallow angle, from `mouth` along `dir`: a strip
+ * of road between two pavements, its near end cut along the edge of the main street's own surface
+ * (|u| = joinU) and matching its height there, so the two meet without a step, a hole or overlap.
+ * It levels off a few metres in. Returns that level, for the lands along it to stand on.
+ */
+function stubSurface(mouth: THREE.Vector3, dir: THREE.Vector3, width: number, len: number, side: 1 | -1, joinU: number) {
+  const lat = new THREE.Vector3(dir.z, 0, -dir.x); // the stub's left
+  const p = new THREE.Vector3();
+  const at = (d: number, w: number) => p.copy(mouth).addScaledVector(dir, d).addScaledVector(lat, w);
+  // across the stub: pavement, carriageway, pavement, with a column on each kerb line
+  const half = width / 2;
+  const ws: number[] = [];
+  for (const [w0, w1, n] of [[-half, -HALF_ROAD, 4], [-HALF_ROAD, HALF_ROAD, 12], [HALF_ROAD, half, 4]] as const) {
+    for (let i = ws.length ? 1 : 0; i <= n; i++) ws.push(w0 + ((w1 - w0) * i) / n);
+  }
+  // where each column leaves the main street's surface, and how high that is
+  const cols = ws.map((w) => {
+    let d = -60;
+    const outside = (dd: number) => {
+      at(dd, w);
+      return side * toRoad(p.x, p.z).u >= joinU;
+    };
+    while (d < len && !outside(d)) d += 0.25;
+    let lo = d - 0.25, hi = d;
+    for (let k = 0; k < 12; k++) {
+      const m = (lo + hi) / 2;
+      if (outside(m)) hi = m;
+      else lo = m;
+    }
+    at(hi, w);
+    const r = toRoad(p.x, p.z);
+    return { w, d0: hi, h0: H(r.s, side * joinU) };
+  });
+  const level = Math.min(...cols.map((c) => c.h0));
+  const ROWS = 22;
+  const pos: number[] = [], uv: number[] = [], col: number[] = [];
+  for (const c of cols) {
+    for (let i = 0; i <= ROWS; i++) {
+      const t = i / ROWS;
+      const d = c.d0 + (len - c.d0) * t * t;
+      const k = Math.min(1, (d - c.d0) / 10);
+      at(d, c.w);
+      pos.push(p.x, c.h0 + (level - c.h0) * k * k * (3 - 2 * k), p.z);
+      uv.push(c.w / 2, d / 2);
+      const g = Math.abs(Math.abs(c.w) - HALF_ROAD) < 0.5 ? 0.78 : 0.95;
+      col.push(g, g, g * 1.02);
+    }
+  }
+  const road: number[] = [], pave: number[] = [];
+  for (let j = 0; j < cols.length - 1; j++) {
+    const arr = Math.abs((cols[j].w + cols[j + 1].w) / 2) < HALF_ROAD ? road : pave;
+    for (let i = 0; i < ROWS; i++) {
+      const a = j * (ROWS + 1) + i, b = a + 1, c = a + ROWS + 1, d = c + 1;
+      arr.push(a, b, c, b, d, c);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.setIndex([...road, ...pave]);
+  geo.addGroup(0, road.length, 0);
+  geo.addGroup(road.length, pave.length, 1);
+  geo.computeVertexNormals();
+  // the street's own materials (the pavement wears the flagstones the street surface gives it).
+  // They're tinted by vertex colour, which the static batcher drops, so like the street surface
+  // this goes into the scene as it is
+  const m = new THREE.Mesh(geo, [M.road(), M.pavement()]);
+  m.receiveShadow = true;
+  G.scene.add(m);
+  return level;
 }
 
 /** Does a box footprint (centre, long axis `along`, half sizes) reach into the street? */
