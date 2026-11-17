@@ -448,6 +448,78 @@ export function signTex(lines: string[], bg = '#14284a', fg = '#fff', w = 256, h
   });
 }
 
+/** A bend chevron board: white chevrons on red, pointing right (`dir` 1) or left (-1). */
+export function chevronTex(dir: 1 | -1) {
+  return memo(`chevron_${dir}`, () => {
+    const c = canvas(256, 96);
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#c4161c';
+    g.fillRect(0, 0, 256, 96);
+    g.fillStyle = '#fff';
+    for (let i = 0; i < 3; i++) {
+      // each chevron drawn pointing right, then mirrored for a left one
+      const x0 = 34 + i * 70;
+      const pts: [number, number][] = [[x0, 12], [x0 + 26, 12], [x0 + 60, 48], [x0 + 26, 84], [x0, 84], [x0 + 34, 48]];
+      g.beginPath();
+      pts.forEach(([x, y], k) => {
+        const xx = dir > 0 ? x : 256 - x;
+        if (k) g.lineTo(xx, y);
+        else g.moveTo(xx, y);
+      });
+      g.closePath();
+      g.fill();
+    }
+    g.strokeStyle = '#fff';
+    g.lineWidth = 5;
+    g.strokeRect(3, 3, 250, 90);
+    const t = tex(c);
+    t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+    return t;
+  });
+}
+
+/** A yellow diversion sign: DIVERSION, an arrow bending right (`dir` 1) or left (-1), and where it leads. */
+export function diversionTex(dir: 1 | -1, place: string) {
+  return memo(`diversion_${dir}_${place}`, () => {
+    const c = canvas(256, 256);
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#f2c14e';
+    g.fillRect(0, 0, 256, 256);
+    g.strokeStyle = '#161616';
+    g.lineWidth = 8;
+    g.strokeRect(8, 8, 240, 240);
+    g.fillStyle = '#161616';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.font = '40px Lilita One, Arial Black';
+    g.fillText('DIVERSION', 128, 44);
+    // the arrow: up the middle, then a bend off to one side, with a head
+    const m = (x: number) => (dir > 0 ? x : 256 - x);
+    g.lineWidth = 20;
+    g.lineCap = 'butt';
+    g.lineJoin = 'round';
+    g.beginPath();
+    g.moveTo(m(96), 196);
+    g.lineTo(m(96), 128);
+    g.quadraticCurveTo(m(96), 106, m(118), 106);
+    g.lineTo(m(168), 106);
+    g.stroke();
+    g.beginPath();
+    g.moveTo(m(206), 106);
+    g.lineTo(m(162), 76);
+    g.lineTo(m(162), 136);
+    g.closePath();
+    g.fill();
+    let fs = 32;
+    g.font = `${fs}px Lilita One, Arial Black`;
+    while (g.measureText(place).width > 220 && fs > 12) g.font = `${--fs}px Lilita One, Arial Black`;
+    g.fillText(place, 128, 224);
+    const t = tex(c);
+    t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+    return t;
+  });
+}
+
 export function heartTex() {
   return memo('heart', () => {
     const c = canvas(256, 256);

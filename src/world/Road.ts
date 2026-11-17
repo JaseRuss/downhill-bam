@@ -117,7 +117,7 @@ function rmCx(s: number) {
  * + = left), grade (+ = downhill), name]. Headings follow the real streets; the long straights
  * are squashed so the run stays a few minutes long.
  */
-const DIVERSION: [number, number, number, string?][] = [
+export const DIVERSION: [number, number, number, string?][] = [
   [68, -98, 0.04, 'junction'], // right off the Royal Mile onto George IV Bridge (a ~40 m radius, so it's makeable at speed)
   [14, 0, 0.02, 'givb'],
   [70, -73, 0.1, 'victoria'], // Victoria Street, steep and curving

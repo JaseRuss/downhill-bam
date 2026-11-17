@@ -3,7 +3,7 @@ import { RAPIER, Entity } from '../core/Physics';
 import { G } from '../ctx';
 import { addStatic } from '../world/Batcher';
 import { M, color, mapMat } from '../art/Materials';
-import { clockTex, signTex, checkerTex, rng } from '../art/Textures';
+import { chevronTex, clockTex, diversionTex, signTex, checkerTex, rng } from '../art/Textures';
 import { hiVis } from '../art/Accessories';
 import { carModel, diggerModel, tramModel } from '../art/Motors';
 import { ball, cyl as mcyl, extrude as mExtrude, lathe, loft, model, Parts, pipe, q as mq, rbox } from '../art/Model';
@@ -26,6 +26,7 @@ import * as LM from '../art/Landmarks';
 import * as LM2 from '../art/Landmarks2';
 import { Parts as MParts } from '../art/Model';
 import { UNIT, battlements, moulding, roof as aroof, sbox } from '../art/Architecture';
+const mbox = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d);
 
 /**
  * The long course: the Royal Mile is shut, so it's down George IV Bridge and Victoria Street to the
@@ -62,8 +63,12 @@ function dressUp(t: { rig: any }, vest: number, cap: number) {
 // =====================================================================
 
 /** A side street off the route, shut with council barriers. `dir` is the world direction it runs. */
+/** The mouths of the shut side streets, so the direction signs keep out of them. */
+const MOUTHS: { side: number; s0: number; s1: number }[] = [];
+
 function blocked(s: number, side: 1 | -1, name: string, dir?: THREE.Vector3, width = 9, opts?: SideStreetOpts) {
   if (!on(s + 6)) return;
+  MOUTHS.push({ side, s0: s, s1: s + width });
   let angle = 90;
   if (dir) {
     // measured where sideStreet will turn it back into a direction
@@ -150,6 +155,92 @@ function scatterAlong(from: number, to: number, exclude: [number, number][], gul
     else G.crowd.tourist(s, (Math.random() - 0.5) * 6);
   }
   for (let s = from + 10; s < to; s += 36 + Math.random() * 22) if (free(s)) G.crowd.pigeons(s, (Math.random() - 0.5) * 5, 5 + Math.floor(Math.random() * 5), gulls);
+}
+
+// =====================================================================
+// direction signs: a DIVERSION sign before each big turn, chevrons round the outside of it
+// =====================================================================
+/** Where each big turn leads, for the sign before it (the junction has its own). */
+const TURN_SIGNS: Record<string, string> = {
+  victoria: 'GRASSMARKET', westend: 'PRINCES ST', eastend: 'LEITH WALK', foot: 'NEWHAVEN', newhaven: 'THE SHORE',
+};
+
+/** A yellow diversion sign on a post, facing the oncoming vehicle; it can be skittled. */
+function advanceSign(s: number, u: number, dir: 1 | -1, place: string) {
+  const g = model('divsign', () => {
+    const p = new MParts();
+    const frame = color(0x161616, 0.6);
+    p.add(mbox(1.36, 1.36, 0.05), frame, [0, 0.45, 0.03]);
+    p.add(mbox(0.07, 1.1, 0.07), color(0x9aa0a4, 0.6), [0, -0.6, 0.06]);
+    return p.build();
+  });
+  // the face is its own plane (one textured draw call), on the side the traffic comes from
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.3), mapMat(diversionTex(dir, place)));
+  face.position.set(0, 0.45, -0.001);
+  face.rotation.y = Math.PI;
+  g.add(face);
+  G.destruction.add(toWorld(s, u, 1.15), theta(s), [0.68, 1.15, 0.08], {
+    visual: g, dynamic: true, density: 60, points: 150, label: 'Diversion Sign', sound: 'metal',
+  });
+}
+
+/** A chevron board on two posts along the outside of a bend, its face to the road. */
+function chevron(s: number, outside: 1 | -1) {
+  const g = model('chevronposts', () => {
+    const p = new MParts();
+    const grey = color(0x9aa0a4, 0.6);
+    for (const z of [-0.9, 0.9]) p.add(mbox(0.07, 1.6, 0.07), grey, [0.04, -0.3, z]);
+    p.add(mbox(0.04, 0.84, 2.44), color(0x161616, 0.6), [0.03, 0.75, 0]);
+    return p.build();
+  });
+  // the chevrons point on along the course: turned round for the right-hand side, the texture flips too
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.8), mapMat(chevronTex(outside < 0 ? 1 : -1)));
+  // built for a board on the left of the road (face towards +u, i.e. local -x), turned round for the right
+  face.position.set(0, 0.75, 0);
+  face.rotation.y = -Math.PI / 2;
+  g.add(face);
+  const e = edge(s, outside);
+  G.destruction.add(toWorld(s, outside * (e - 0.45), 1.2), theta(s) + (outside > 0 ? Math.PI : 0), [0.06, 1.2, 1.22], {
+    visual: g, density: 300, release: 30, points: 120, label: 'Chevron Sign', sound: 'metal', retain: 0.9,
+  });
+}
+
+/** Signs round every big turn of the open course. Returns the stretches they take up, for the clutter to avoid. */
+function directionSigns(): [number, number][] {
+  const taken: [number, number][] = [];
+  const clear = (s: number, u: number) => !G.destruction.parts.some((p) => {
+    const r = toRoad(p.mesh.position.x, p.mesh.position.z);
+    return Math.abs(r.s - s) < 1.8 && Math.abs(r.u - u) < 1.0;
+  });
+  let s0 = JOIN_S, prevLen = 0;
+  for (const [len, turn, , name] of Road.DIVERSION) {
+    const start = s0;
+    s0 += len;
+    const before = prevLen;
+    prevLen = len;
+    if (Math.abs(turn) < 35 || !name) continue;
+    // turning right (-) puts the outside of the bend on the left
+    const outside: 1 | -1 = turn < 0 ? -1 : 1;
+    const place = TURN_SIGNS[name];
+    if (place) {
+      const s = start - Math.min(24, Math.max(8, before - 4));
+      const u = outside * (edge(s, outside) - 1.2);
+      if (on(s + 2) && clear(s, u)) {
+        advanceSign(s, u, turn < 0 ? 1 : -1, place);
+        taken.push([s - 2.5, s + 2.5]);
+      }
+    }
+    const n = Math.max(2, Math.round(len / 12));
+    for (let i = 0; i < n; i++) {
+      const s = start + (len * (i + 0.5)) / n;
+      if (!on(s + 2)) continue;
+      if (MOUTHS.some((m) => m.side === outside && s > m.s0 - 1.5 && s < m.s1 + 1.5)) continue;
+      if (!clear(s, outside * (edge(s, outside) - 0.45))) continue;
+      chevron(s, outside);
+      taken.push([s - 1.8, s + 1.8]);
+    }
+  }
+  return taken;
 }
 
 // =====================================================================
@@ -507,38 +598,31 @@ function squareSurface() {
 }
 
 /**
- * A round café table, with a parasol over it if `canopy` is given. Origin at mid-height of the table.
- * Every piece shares one finish, so the whole thing is a single draw call (there are dozens of them).
+ * A café bench table: a slatted top with a bench fixed either side, and a parasol through the middle
+ * if `canopy` is given. One piece (one body, one draw call) where a table and chairs would be five.
+ * Origin at mid-height of the table; it runs along local z.
  */
-function cafeTableModel(canopy?: number) {
-  return model(`cafetable_${canopy ?? 'bare'}`, () => {
+function benchTableModel(canopy?: number) {
+  return model(`benchtable_${canopy ?? 'bare'}`, () => {
     const p = new MParts();
-    const iron = color(0x1f2a24, 0.6);
-    p.add(mcyl(0.38, 0.38, 0.035, mq(18, 8)), color(0xe9e4d8, 0.6), [0, 0.355, 0]);
-    p.add(mcyl(0.38, 0.38, 0.02, mq(18, 8), true), iron, [0, 0.33, 0]);
-    p.add(mcyl(0.028, 0.028, 0.68, 6), iron);
-    p.add(mcyl(0.16, 0.24, 0.05, mq(12, 6)), iron, [0, -0.345, 0]);
-    if (canopy !== undefined) {
-      const cloth = color(canopy, 0.6), wood = color(0xd8cdb4, 0.6);
-      p.add(mcyl(0.02, 0.02, 1.9, 6), wood, [0, 1.3, 0]);
-      p.add(lathe([[1.25, 0], [0.9, 0.18], [0.0001, 0.42]], mq(12, 8), { cap: 'none' }), cloth, [0, 1.95, 0]);
-      p.add(mcyl(1.25, 1.25, 0.14, mq(12, 8), true), cloth, [0, 1.88, 0]);
-      p.add(ball(0.05, 6), wood, [0, 2.4, 0]);
+    const wood = color(0x8a5a32, 0.7), frame = color(0x2b2b2b, 0.7);
+    for (let k = 0; k < 5; k++) p.add(mbox(0.19, 0.045, 1.9), wood, [-0.4 + k * 0.2, 0.355, 0]);
+    for (const x of [-0.72, 0.72]) {
+      for (const k of [-1, 1]) p.add(mbox(0.15, 0.045, 1.9), wood, [x + k * 0.08, -0.03, 0]);
     }
-    return p.build();
-  });
-}
-
-/** A café chair: wicker seat and back on a dark iron frame. Origin at mid-height; it faces +z. One draw call. */
-function cafeChairModel() {
-  return model('cafechair', () => {
-    const p = new MParts();
-    const iron = color(0x1f2a24, 0.6);
-    const wicker = color(0xb08a55, 0.6);
-    p.add(rbox(0.42, 0.045, 0.42, 0.015), wicker, [0, 0.02, 0]);
-    p.add(rbox(0.42, 0.36, 0.03, 0.012), wicker, [0, 0.26, -0.2], [-0.12, 0, 0]);
-    for (const [x, z] of [[-0.18, -0.18], [0.18, -0.18], [-0.18, 0.18], [0.18, 0.18]]) p.add(mcyl(0.014, 0.014, 0.45, 5), iron, [x, -0.21, z]);
-    for (const x of [-0.19, 0.19]) p.add(mcyl(0.014, 0.014, 0.45, 5), iron, [x, 0.25, -0.215], [-0.12, 0, 0]);
+    // A-frames at each end, braced
+    for (const z of [-0.75, 0.75]) {
+      p.add(mbox(1.7, 0.06, 0.07), frame, [0, -0.08, z]);
+      for (const sx of [-1, 1]) p.add(mbox(0.07, 0.86, 0.07), frame, [sx * 0.3, -0.02, z], [0, 0, sx * 0.42]);
+    }
+    p.add(mbox(0.06, 0.06, 1.5), frame, [0, -0.2, 0]);
+    if (canopy !== undefined) {
+      const cloth = color(canopy, 0.7), pole = color(0xd8cdb4, 0.7);
+      p.add(mcyl(0.022, 0.022, 2.1, 6), pole, [0, 1.25, 0]);
+      p.add(lathe([[1.45, 0], [1.05, 0.2], [0.0001, 0.48]], mq(12, 8), { cap: 'none' }), cloth, [0, 1.95, 0]);
+      p.add(mcyl(1.45, 1.45, 0.15, mq(12, 8), true), cloth, [0, 1.88, 0]);
+      p.add(ball(0.05, 6), pole, [0, 2.45, 0]);
+    }
     return p.build();
   });
 }
@@ -564,44 +648,35 @@ function grassmarketSquare() {
   stall(g0 + 58.5, 10.6, 'fudge', 'TABLET & TOFFEE', ['#c46a1a', '#f4ecd8']);
   for (const [s, u] of [[41.5, 9.1], [48.6, 12.4], [55.2, 9.0]]) G.crowd.tourist(g0 + s, u);
 
-  // café terraces out front of the pubs on the north side: tables, chairs, parasols and diners
+  // café terraces out front of the pubs on the north side: bench tables, parasols and diners
   let smashed = 0;
   const trashed = once(() => {
     G.scoring.award('TERRACE TRASHED!', 2000, G.trolley.position.add(new THREE.Vector3(0, 2.5, 0)), true, 'terrace');
     G.commentary.say('terrace', true);
   });
-  const chairs = QUALITY.crowd >= 1 ? 3 : 2;
   const r = rng(808);
   const terrace = (sFrom: number, n: number, rows: number[], canopy: number) => {
-    for (const u of rows) {
+    rows.forEach((u, row) => {
       for (let i = 0; i < n; i++) {
-        const s = sFrom + i * 3.2 + (r() - 0.5) * 0.4;
+        const s = sFrom + i * 3.4 + (r() - 0.5) * 0.3;
         const hit = { done: false };
-        // square-on: the collider is a box, and turned it would reach into the chairs
-        G.destruction.add(toWorld(s, u, 0.37), q(s), [0.36, 0.37, 0.36], {
-          visual: cafeTableModel((i + rows.indexOf(u)) % 2 ? canopy : undefined), dynamic: true, density: 120, points: 120,
-          label: 'Café Table', sound: 'metal', retain: 0.9,
+        G.destruction.add(toWorld(s, u, 0.38), q(s), [0.95, 0.38, 1.0], {
+          visual: benchTableModel((i + row) % 2 ? canopy : undefined), dynamic: true, density: 90, points: 200,
+          label: 'Café Table', sound: 'wood', retain: 0.88,
           onHit: () => {
             if (hit.done) return;
             hit.done = true;
             if (++smashed >= 10) trashed();
           },
         });
-        // chairs either side along the terrace, and one with its back to the shops
-        const seats: [number, number, number][] = [[-0.66, 0, 0], [0.66, 0, Math.PI], [0, 0.66, Math.PI / 2]];
-        for (const [ds, du, face] of seats.slice(0, chairs)) {
-          G.destruction.add(toWorld(s + ds, u + du, 0.43), q(s, face + (r() - 0.5) * 0.5), [0.21, 0.43, 0.21], {
-            visual: cafeChairModel(), dynamic: true, density: 60, points: 40, label: 'Café Chair', sound: 'wood', retain: 0.95, shadow: false,
-          });
-        }
-        // a diner on the square side of every other table
-        if (r() < 0.5) G.crowd.tourist(s, u - 0.98, 'tourist', 0, 'Diner Disturbed', 150);
+        // diners stand about in the gaps between the tables
+        if (r() < 0.5 && i < n - 1) G.crowd.tourist(s + 1.7, u + (r() - 0.5) * 0.6, 'tourist', 0, 'Diner Disturbed', 150);
       }
-    }
+    });
   };
-  terrace(g0 + 14.5, 6, [13.4, 16.0, 18.6], PARASOLS[0]);
-  terrace(g0 + 38.5, 6, [16.0, 18.6], PARASOLS[1]);
-  terrace(g0 + 62.5, 5, [16.0, 18.6], PARASOLS[2]);
+  terrace(g0 + 14.5, 6, [13.0, 15.7, 18.4], PARASOLS[0]);
+  terrace(g0 + 38.5, 6, [15.7, 18.4], PARASOLS[1]);
+  terrace(g0 + 62.5, 5, [15.7, 18.4], PARASOLS[2]);
 }
 
 // =====================================================================
@@ -1403,6 +1478,7 @@ function styleAt(s: number): StreetStyle {
 // =====================================================================
 export function buildDiversion(tier: number): Level {
   LIMIT = Road.S_MAX - 2;
+  MOUTHS.length = 0;
   const m = MARKS;
   const sTo = tier >= 4 ? m.end : Road.S_MAX - 1;
   const R = (side: 1 | -1, s0: number, s1: number): Reserved => ({ side, s0, s1 });
@@ -1516,8 +1592,10 @@ export function buildDiversion(tier: number): Level {
     roadClosed(Road.FINISH_S + 13, 'LEITH WALK: STAGE 4');
   }
 
+  const signs = directionSigns();
   scatterAlong(-4, JOIN_S - 2, [[-60, 6], [38, 56], [88, 106]]);
   scatterAlong(JOIN_S + 16, sTo - 6, [
+    ...signs,
     [m.victoria + 18, m.victoria + 34],
     [m.grassmarket + 18, m.grassmarket + 56],
     [m.grassmarket + 60, m.grassmarket + 72],
