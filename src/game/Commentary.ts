@@ -66,6 +66,7 @@ const LINES: Record<string, string[]> = {
   stalled: ["No engine and nae hill. That's that, then.", "He's run out o' downhill!"],
   grassmarket: ["Into the Grassmarket! Mind the drinkers!", "The beer garden's open. Not for long."],
   pints: ["That's a lot of spilt pints. There'll be a riot.", "Somebody's going tae want a refill."],
+  terrace: ["He's cleared the whole terrace! Table for none?", "Al fresco dining, now with added trolley.", "That's the outdoor seating licence gone, then."],
   covenanters: ["Not the Covenanters' Memorial! Have ye no respect?", "Four hundred years o' history and a trolley."],
   warden: ["He's flattened the traffic warden! The whole city cheers!", "That's the most popular thing anyone's ever done in Edinburgh."],
   cars: ["Car alarm! Car alarm everywhere!", "Ye'll no' get a parking space like that."],

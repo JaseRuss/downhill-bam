@@ -24,6 +24,8 @@ interface Zone {
   s1: number;
   l: number;
   r: number;
+  /** Length of the splay at each end (default BAY_T). */
+  t?: number;
 }
 
 const RM_BAYS: Bay[] = [
@@ -57,6 +59,9 @@ let ZONES: Zone[] = [];
 /** Named places along the course (start of each stretch). */
 export const MARKS: Record<string, number> = {};
 
+/** Building line on the north (right) side of the Grassmarket, across its pedestrian square. */
+export const GRASSMARKET_R = 21;
+
 /** Where the long course leaves the Royal Mile (the George IV Bridge junction). */
 export const JOIN_S = 112;
 
@@ -74,7 +79,8 @@ export function edgeR(s: number) {
   }
   for (const z of ZONES) {
     if (s <= z.s0 || s >= z.s1) continue;
-    const k = Math.min(1, (s - z.s0) / BAY_T, (z.s1 - s) / BAY_T);
+    const t = z.t ?? BAY_T;
+    const k = Math.min(1, (s - z.s0) / t, (z.s1 - s) / t);
     return HALF_STREET + (z.r - HALF_STREET) * k;
   }
   return HALF_STREET;
@@ -84,7 +90,8 @@ export function edgeR(s: number) {
 export function edgeL(s: number) {
   for (const z of ZONES) {
     if (s <= z.s0 || s >= z.s1) continue;
-    const k = Math.min(1, (s - z.s0) / BAY_T, (z.s1 - s) / BAY_T);
+    const t = z.t ?? BAY_T;
+    const k = Math.min(1, (s - z.s0) / t, (z.s1 - s) / t);
     return HALF_STREET + (z.l - HALF_STREET) * k;
   }
   return HALF_STREET;
@@ -188,7 +195,8 @@ export function setCourse(course: CourseId, tier: number) {
     ZONES = [
       // extra room through the turn off the Royal Mile and along George IV Bridge
       { s0: JOIN_S - 6, s1: MARKS.victoria + 2, l: 9.8, r: 9.4 },
-      { s0: MARKS.grassmarket - 4, s1: MARKS.westport + 4, l: 10.6, r: 11.2 },
+      // the Grassmarket: the north side opens out into a pedestrian square
+      { s0: MARKS.grassmarket - 4, s1: MARKS.westport + 4, l: 10.6, r: GRASSMARKET_R, t: 14 },
       { s0: MARKS.princes + 4, s1: MARKS.eastend, l: 9.2, r: 11.0 },
       { s0: MARKS.leithwalk + 6, s1: MARKS.foot - 4, l: 9.0, r: 9.0 },
     ];

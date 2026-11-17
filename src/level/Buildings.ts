@@ -328,6 +328,18 @@ export function buildStreet(reserved: Reserved[], sFrom: number, sTo: number, st
         const rad = 1 / k + (inner ? -edge(s) : edge(s));
         w = Math.min(w, Math.max(4, 2 * Math.sqrt(2 * (inner ? 0.45 : 1.2) * Math.max(1, rad))));
       }
+      // a land is either on a splay or on a steady building line, never across the change: a
+      // straight front from one to the other would cut the corner and stand out in the street
+      {
+        const changing = (x: number) => Math.abs(edge(x + 0.5) - edge(x)) > 0.01;
+        const was = changing(s);
+        for (let d = 0.5; d < w; d += 0.5) {
+          if (changing(s + d) !== was) {
+            w = d;
+            break;
+          }
+        }
+      }
       const next = reserved.filter((x) => x.side === side && x.s0 >= s).sort((a, b) => a.s0 - b.s0)[0];
       if (next && s + w > next.s0) w = next.s0 - s;
       if (s + w > sTo) w = sTo - s;

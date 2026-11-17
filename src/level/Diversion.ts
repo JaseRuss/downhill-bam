@@ -122,18 +122,20 @@ function roadClosed(s: number, next: string) {
 }
 
 /** Lamp posts, bins, benches, tourists and pigeons along a stretch. */
-function scatterAlong(from: number, to: number, exclude: [number, number][], gulls = false) {
+function scatterAlong(from: number, to: number, exclude: [number, number][], gulls = false, excludeRight: [number, number][] = []) {
   const free = (s: number) => on(s + 2) && !exclude.some(([a, b]) => s > a && s < b);
+  // stretches where the right-hand side is furnished by a set piece of its own
+  const freeR = (s: number) => !excludeRight.some(([a, b]) => s > a && s < b);
   let k = 0;
   for (let s = from; s < to; s += 23) {
     for (const side of [-1, 1] as const) {
       const ss = s + side * 3;
-      if (free(ss) && !(side > 0 && ss > Road.SEA_S0)) lampPost(ss, side * Math.min(6.9, edge(ss, side) - 0.7));
+      if (free(ss) && !(side > 0 && (ss > Road.SEA_S0 || !freeR(ss)))) lampPost(ss, side * Math.min(6.9, edge(ss, side) - 0.7));
     }
   }
   for (let s = from + 2; s < to; s += 7 + Math.random() * 7) {
     if (!free(s)) continue;
-    const side = Math.random() < 0.5 ? -1 : 1;
+    const side = Math.random() < 0.5 || !freeR(s) ? -1 : 1;
     const e = edge(s, side);
     const r = Math.random();
     k++;
@@ -379,7 +381,8 @@ function grassmarket() {
   // engine-start gantry over the street
   const es = Road.ENGINE_S;
   const g = roadGroup(es, 0, 0);
-  const el = edgeL(es) - 0.5, er = edgeR(es) - 0.5;
+  // over the street and its pavements, not right across the square
+  const el = edgeL(es) - 0.5, er = Math.min(edgeR(es) - 0.5, HALF_STREET + 1);
   for (const u of [-el, er]) g.add(bx(0.3, 6, 0.3, M.steel(), -u, 3, 0));
   g.add(bx(el + er + 0.6, 0.4, 0.4, M.steel(), -(er - el) / 2, 6, 0));
   const face = mapMat(signTex(['ENGINES ON · IT\'S UPHILL FROM HERE'], '#1b4f9c', '#fff', 1024, 96));
@@ -430,8 +433,8 @@ function grassmarket() {
     G.crowd.tourist(s + 1.2, u - 1.3, 'tourist', 0, 'Drinker Spilled', 150);
   }
 
-  // the Covenanters' Memorial: a round of setts behind railings, a saltire in stone
-  const cs = MARKS.grassmarket + 66, cu = edgeR(cs) - 2.2;
+  // the Covenanters' Memorial: a round of setts behind railings, a saltire in stone, out on the square
+  const cs = MARKS.grassmarket + 66, cu = 12;
   const cg = roadGroup(cs, cu, 0);
   cg.add(cyl(1.9, 1.9, 0.12, M.stone(30, 44, 51), 0, 0.06, 0, 24));
   const saltire = mapMat(signTex(['✕'], '#1b4f9c', '#fff', 64, 64));
@@ -452,9 +455,153 @@ function grassmarket() {
     onHit: () => say(),
   });
   void rails;
-  // a market stall or two on the north side
-  stall(MARKS.grassmarket + 40, edgeR(MARKS.grassmarket + 40) - 2.4, 'fudge', 'GRASSMARKET FUDGE', ['#8e2c48', '#f4ecd8']);
-  stall(MARKS.grassmarket + 50, edgeR(MARKS.grassmarket + 50) - 2.4, 'scarf', 'CASHMERE (ISH)', ['#1b4f9c', '#f4ecd8']);
+  grassmarketSquare();
+}
+
+// ---------------------------------------------------------------- the Grassmarket's square
+/** Where the square is full width (the north building line splays out to it either side). */
+const SQ = () => [MARKS.grassmarket + 10, MARKS.westport - 10] as const;
+
+/**
+ * The square's paving. The street surface stops at U_MAX, so beyond that the square gets a strip
+ * of its own, flagged like the pavement, at pavement height and with a collider of its own.
+ */
+function squareSurface() {
+  const s0 = MARKS.grassmarket - 4, s1 = MARKS.westport + 4;
+  const uIn = Road.U_MAX, COLS = 14, DS = 0.5;
+  const pos: number[] = [], uv: number[] = [], col: number[] = [];
+  const r = rng(41);
+  let rows = 0;
+  for (let s = s0; s <= s1 + 1e-6; s += DS, rows++) {
+    // out to well under the lands' fronts; nothing where the building line is inside the street's own surface
+    const uOut = Math.max(uIn, edgeR(s) + 3);
+    for (let j = 0; j <= COLS; j++) {
+      const u = uIn + ((uOut - uIn) * j) / COLS;
+      const p = toWorld(s, u, 0);
+      pos.push(p.x, p.y, p.z);
+      uv.push(u / 2, s / 2);
+      const c = 0.92 + r() * 0.12;
+      col.push(c, c, c * 1.02);
+    }
+  }
+  const idx: number[] = [];
+  for (let i = 0; i < rows - 1; i++) {
+    for (let j = 0; j < COLS; j++) {
+      const a = i * (COLS + 1) + j, b = a + 1, c = a + COLS + 1, d = c + 1;
+      idx.push(a, b, c, b, d, c);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  // vertex-tinted like the street surface, which the static batcher can't keep: straight into the scene
+  const mesh = new THREE.Mesh(geo, M.pavement());
+  mesh.receiveShadow = true;
+  G.scene.add(mesh);
+  // it's part of the ground as far as anything landing on it is concerned
+  const desc = RAPIER.ColliderDesc.trimesh(new Float32Array(pos), new Uint32Array(idx), RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES).setFriction(0.9);
+  G.physics.register(G.physics.world.createCollider(desc, G.terrain.body), G.terrain);
+}
+
+/**
+ * A round café table, with a parasol over it if `canopy` is given. Origin at mid-height of the table.
+ * Every piece shares one finish, so the whole thing is a single draw call (there are dozens of them).
+ */
+function cafeTableModel(canopy?: number) {
+  return model(`cafetable_${canopy ?? 'bare'}`, () => {
+    const p = new MParts();
+    const iron = color(0x1f2a24, 0.6);
+    p.add(mcyl(0.38, 0.38, 0.035, mq(18, 8)), color(0xe9e4d8, 0.6), [0, 0.355, 0]);
+    p.add(mcyl(0.38, 0.38, 0.02, mq(18, 8), true), iron, [0, 0.33, 0]);
+    p.add(mcyl(0.028, 0.028, 0.68, 6), iron);
+    p.add(mcyl(0.16, 0.24, 0.05, mq(12, 6)), iron, [0, -0.345, 0]);
+    if (canopy !== undefined) {
+      const cloth = color(canopy, 0.6), wood = color(0xd8cdb4, 0.6);
+      p.add(mcyl(0.02, 0.02, 1.9, 6), wood, [0, 1.3, 0]);
+      p.add(lathe([[1.25, 0], [0.9, 0.18], [0.0001, 0.42]], mq(12, 8), { cap: 'none' }), cloth, [0, 1.95, 0]);
+      p.add(mcyl(1.25, 1.25, 0.14, mq(12, 8), true), cloth, [0, 1.88, 0]);
+      p.add(ball(0.05, 6), wood, [0, 2.4, 0]);
+    }
+    return p.build();
+  });
+}
+
+/** A café chair: wicker seat and back on a dark iron frame. Origin at mid-height; it faces +z. One draw call. */
+function cafeChairModel() {
+  return model('cafechair', () => {
+    const p = new MParts();
+    const iron = color(0x1f2a24, 0.6);
+    const wicker = color(0xb08a55, 0.6);
+    p.add(rbox(0.42, 0.045, 0.42, 0.015), wicker, [0, 0.02, 0]);
+    p.add(rbox(0.42, 0.36, 0.03, 0.012), wicker, [0, 0.26, -0.2], [-0.12, 0, 0]);
+    for (const [x, z] of [[-0.18, -0.18], [0.18, -0.18], [-0.18, 0.18], [0.18, 0.18]]) p.add(mcyl(0.014, 0.014, 0.45, 5), iron, [x, -0.21, z]);
+    for (const x of [-0.19, 0.19]) p.add(mcyl(0.014, 0.014, 0.45, 5), iron, [x, 0.25, -0.215], [-0.12, 0, 0]);
+    return p.build();
+  });
+}
+
+const PARASOLS = [0xa8232e, 0x1d5c3a, 0xf1e6c8, 0x1b3d6e];
+
+function grassmarketSquare() {
+  const g0 = MARKS.grassmarket;
+  const [a, b] = SQ();
+  squareSurface();
+
+  // where the road ends and the square begins: a line of bollards along the kerb, with gaps
+  // a trolley will fit through
+  for (let s = a - 6; s < b + 6; s += 4.6) bollard(s, HALF_ROAD + 0.65);
+  for (const s of [g0 + 13, g0 + 37, g0 + 63, g0 + 80]) lampPost(s, 8.2);
+  bench(g0 + 60, 8.4);
+  bench(g0 + 72, 8.4);
+
+  // the market: a row of stalls down the middle of the square
+  stall(g0 + 38, 10.6, 'fudge', 'GRASSMARKET FUDGE', ['#8e2c48', '#f4ecd8']);
+  stall(g0 + 45, 10.6, 'haggis', 'HAGGIS TO TAKE AWAY', ['#1d5c3a', '#f4ecd8']);
+  stall(g0 + 52, 10.6, 'scarf', 'CASHMERE (ISH)', ['#1b4f9c', '#f4ecd8']);
+  stall(g0 + 58.5, 10.6, 'fudge', 'TABLET & TOFFEE', ['#c46a1a', '#f4ecd8']);
+  for (const [s, u] of [[41.5, 9.1], [48.6, 12.4], [55.2, 9.0]]) G.crowd.tourist(g0 + s, u);
+
+  // café terraces out front of the pubs on the north side: tables, chairs, parasols and diners
+  let smashed = 0;
+  const trashed = once(() => {
+    G.scoring.award('TERRACE TRASHED!', 2000, G.trolley.position.add(new THREE.Vector3(0, 2.5, 0)), true, 'terrace');
+    G.commentary.say('terrace', true);
+  });
+  const chairs = QUALITY.crowd >= 1 ? 3 : 2;
+  const r = rng(808);
+  const terrace = (sFrom: number, n: number, rows: number[], canopy: number) => {
+    for (const u of rows) {
+      for (let i = 0; i < n; i++) {
+        const s = sFrom + i * 3.2 + (r() - 0.5) * 0.4;
+        const hit = { done: false };
+        // square-on: the collider is a box, and turned it would reach into the chairs
+        G.destruction.add(toWorld(s, u, 0.37), q(s), [0.36, 0.37, 0.36], {
+          visual: cafeTableModel((i + rows.indexOf(u)) % 2 ? canopy : undefined), dynamic: true, density: 120, points: 120,
+          label: 'Café Table', sound: 'metal', retain: 0.9,
+          onHit: () => {
+            if (hit.done) return;
+            hit.done = true;
+            if (++smashed >= 10) trashed();
+          },
+        });
+        // chairs either side along the terrace, and one with its back to the shops
+        const seats: [number, number, number][] = [[-0.66, 0, 0], [0.66, 0, Math.PI], [0, 0.66, Math.PI / 2]];
+        for (const [ds, du, face] of seats.slice(0, chairs)) {
+          G.destruction.add(toWorld(s + ds, u + du, 0.43), q(s, face + (r() - 0.5) * 0.5), [0.21, 0.43, 0.21], {
+            visual: cafeChairModel(), dynamic: true, density: 60, points: 40, label: 'Café Chair', sound: 'wood', retain: 0.95, shadow: false,
+          });
+        }
+        // a diner on the square side of every other table
+        if (r() < 0.5) G.crowd.tourist(s, u - 0.98, 'tourist', 0, 'Diner Disturbed', 150);
+      }
+    }
+  };
+  terrace(g0 + 14.5, 6, [13.4, 16.0, 18.6], PARASOLS[0]);
+  terrace(g0 + 38.5, 6, [16.0, 18.6], PARASOLS[1]);
+  terrace(g0 + 62.5, 5, [16.0, 18.6], PARASOLS[2]);
 }
 
 // =====================================================================
@@ -1198,7 +1345,7 @@ const TOUR_LONG: TourInfo[] = [
   RM_TOUR[2],
   { name: 'Diversion: George IV Bridge', pts: 'PORTALOO 800 · DIVERSION SIGNS', blurb: 'The Royal Mile is shut. Hard right down George IV Bridge, and mind the portaloo. Somebody is in it.', s: JOIN_S + 6, cam: [JOIN_S - 16, -1.5, 4], look: [JOIN_S + 12, -5, 1.5] },
   { name: 'Victoria Street', pts: 'BROOM BROOM 1,200 · TERRACE', blurb: 'The painted curve down to the Grassmarket. Scatter the brooms outside the broom shop.', s: 0, cam: [0, -2, 3.5], look: [0, 7, 1.2] },
-  { name: 'The Grassmarket', pts: "ROUND'S ON YOU 1,500 · ENGINES ON", blurb: "Beer garden, spilt pints, the Covenanters' Memorial. Engines fire up here: from now on it's uphill or flat.", s: 0, cam: [0, -1, 3.2], look: [0, -8, 1] },
+  { name: 'The Grassmarket', pts: "ROUND'S ON YOU 1,500 · TERRACE TRASHED 2,000 · ENGINES ON", blurb: "Half of it's pedestrianised: café terraces, a market and the Covenanters' Memorial on the square, a beer garden across the road. Engines fire up here: from now on it's uphill or flat.", s: 0, cam: [0, -3, 4], look: [0, 6, 1] },
   { name: "King's Stables Road", pts: 'TRAFFIC WARDEN 2,500 · PARKED CARS 400', blurb: 'Climb under the castle rock. The warden is ticketing everything. Return the favour.', s: 0, cam: [0, 2, 3], look: [0, -6, 1] },
   { name: 'The Caledonian', pts: 'HOTEL DOORMAN 500', blurb: 'Round the West End past the big red Caley, and on to Princes Street.', s: 0, cam: [0, 2, 4], look: [0, -12, 8] },
   { name: 'Princes Street Christmas Market', pts: 'BIG WHEEL 4,000 · TRAM-BOOZLED 3,000', blurb: 'Knock the big wheel off its legs and watch it roll down Princes Street. And look out for the tram.', s: 0, cam: [0, 0, 4.5], look: [0, 9, 6] },
@@ -1380,7 +1527,7 @@ export function buildDiversion(tier: number): Level {
     [m.foot, m.foot + 16],
     [m.end - 22, m.end + 10],
     [Road.FINISH_S - 10, Road.FINISH_S + 20],
-  ], false);
+  ], false, [[m.grassmarket - 4, m.westport + 4]]);
 
   const tour = longTour();
   const keepOut = (x: number, z: number) => {
